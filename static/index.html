@@ -56,10 +56,6 @@
     <!-- 大厅 -->
     <div class="full-screen house" v-if="where === 1">
       <div class="row text-right quick-bar">
-        <div class="quick-brand">
-          <strong>雀阁</strong>
-          <span>纸牌房</span>
-        </div>
         <span v-if="myUser && myUser.username" class="user-badge" :title="'已用 Discuz 账号登录 (uid=' + myUser.uid + ')'">{{myUser.username}}</span>
         <button class="btn-ghost btn-mute" type="button" @click="toggleMute"
           :title="muted ? '开启音效' : '静音'">{{muted ? '♪ 静音' : '♪ 音效'}}</button>
@@ -156,7 +152,7 @@
       <!-- 竖屏房号浮标（桌面端隐藏） -->
       <div class="room-code-float" v-if="roomCode"
         @mouseenter="showRoomCodeFloat()"
-        @mouseleave="hideRoomCodeFloatDelayed()">
+        @mouseleave="hideRoomCodeFloat()">
         <span class="room-code-float-badge">#{{roomCode || deskId}}</span>
         <div class="room-code-float-panel" v-show="roomCodeFloatVisible">
           <strong>{{gameTypeName(gameType)}}</strong>
@@ -846,6 +842,8 @@
             this.posState.top.ctxCards = [];
             this.posState.self.ctxCards = [];
 
+            this._suggestClicked = false;
+
             // —— 发牌音效 ——
             if (window.FX) {
               FX.beep('deal');
@@ -923,6 +921,10 @@
             }
             this.removeCards(direct, data.ctxData.cards);
             this.roomState.ctxPos = this.getDirectionByPosId(data.posId);
+            // 轮到自己出牌时重置“提示”二连击状态
+            if (this.roomState.ctxPos === 'self') {
+              this._suggestClicked = false;
+            }
             //如果是自己出牌就清空上一轮自己出的牌
             if (this.roomState.ctxPos === 'self') {
               this.posState.self.ctxCards = [];
@@ -1352,23 +1354,13 @@
             clearTimeout(this._roomCodeFloatTimer);
             this._roomCodeFloatTimer = null;
           }
-          // 每次展开后 3s 无操作自动收起
-          this._roomCodeFloatTimer = setTimeout(function () {
-            self.roomCodeFloatVisible = false;
-            self._roomCodeFloatTimer = null;
-          }, 3000);
         },
-        hideRoomCodeFloatDelayed: function () {
-          var self = this;
-          // 鼠标移开后 3s 无操作自动隐藏
+        hideRoomCodeFloat: function () {
           if (this._roomCodeFloatTimer) {
             clearTimeout(this._roomCodeFloatTimer);
             this._roomCodeFloatTimer = null;
           }
-          this._roomCodeFloatTimer = setTimeout(function () {
-            self.roomCodeFloatVisible = false;
-            self._roomCodeFloatTimer = null;
-          }, 3000);
+          this.roomCodeFloatVisible = false;
         },
         openRules: function () {
           var isGd = this.selectedGameType === 'guandan' || this.gameType === 'guandan';
@@ -1678,6 +1670,7 @@
           layer.load({ type: 3 });
         },
         resetRoomStatus: function () {
+          this.startTimer(false);//停止计时器
           this.where = 1;
           this.posId = '';
           this.deskId = '';
@@ -1716,6 +1709,7 @@
           this.scoreBoard = {};
           this.scoreSeen = [];
           this.lastRoundDelta = null;
+          this._suggestClicked = false;
           this.guandanScore = { team0: 0, team1: 0 };
           this.guandanLastOrder = [];
         },
@@ -1765,11 +1759,12 @@
               return layer.msg('你的牌不符合规则');
             }
           }
-
+          this._suggestClicked = false;
           this.client.emit('PLAY_CARD', cards);
         },
         //不出
         passCards: function () {
+          this._suggestClicked = false;
           this.client.emit('PLAY_CARD', [])
         },
         autoPlayCards: function () {
@@ -1987,6 +1982,14 @@
           if (this.roomState.state !== 2 || this.roomState.ctxPos !== 'self') {
             return layer.msg('暂未到出牌时机');
           }
+          // 第二次点击提示 → 直接全选手牌（一键出完）
+          if (this._suggestClicked) {
+            this.posState.self.cards.forEach(function (c) { c.selected = true; });
+            window.FX && FX.beep('chip');
+            this._suggestClicked = false;
+            return;
+          }
+          this._suggestClicked = true;
           var lastInfo = {
             len: this.roomState.ctxCard.len,
             key: this.roomState.ctxCard.key,
@@ -2009,6 +2012,7 @@
           this.posState.self.cards.forEach(function (c) { c.selected = false; });
           if (!picks || !picks.length) {
             window.FX && FX.beep('tick');
+            this._suggestClicked = false;
             // 没有可出的牌时自动不出
             return this.passCards();
           }

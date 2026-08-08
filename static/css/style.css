@@ -810,22 +810,24 @@ button.btn-ghost {
 /* 查看上一轮按钮 */
 .btn-last-round {
   position: fixed;
-  bottom: 8px;
-  right: 8px;
+  bottom: 240px;
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 70;
-  padding: 6px 14px;
+  padding: 8px 22px;
   font-family: var(--font-serif);
-  font-size: 13px;
-  letter-spacing: 0.05em;
+  font-size: 15px;
+  letter-spacing: 0.1em;
   color: var(--text);
-  background: rgba(0,0,0,0.45);
+  background: rgba(0,0,0,0.55);
   border: 1px solid var(--gold-line);
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   transition: all .2s var(--ease-soft);
+  backdrop-filter: blur(4px);
 }
-.btn-last-round:hover { color: var(--gold); border-color: var(--gold-soft); box-shadow: 0 0 12px rgba(208,168,92,0.3); }
-.btn-last-round.ctx-active { color: var(--gold); border-color: var(--gold); }
+.btn-last-round:hover { color: var(--gold); border-color: var(--gold-soft); box-shadow: 0 0 16px rgba(208,168,92,0.4); }
+.btn-last-round.ctx-active { color: var(--gold); border-color: var(--gold); background: rgba(0,0,0,0.7); }
 
 /* 查看上一轮：回放片段的半透明样式 */
 .ctx-last-round .card { opacity: 0.85; }
@@ -1025,13 +1027,18 @@ button.btn-ghost {
 /* —— 左家 / 右家 —— */
 .card-group-left {
   top: calc(50vh - 175px); left: var(--table-left-safe);
-  transform: scale(0.7);
+  transform: scale(0.85);
   transform-origin: bottom left;
 }
 .card-group-right {
   top: calc(50vh - 175px); right: var(--table-right-safe); left: auto;
-  transform: scale(0.7);
+  transform: scale(0.85);
   transform-origin: bottom right;
+}
+/* 掼蛋：上家手牌也适当放大 */
+.card-group-top.card-group-up {
+  transform: translateX(-50%) scale(0.85);
+  transform-origin: top center;
 }
 
 /* 中央出牌区 */
@@ -2523,15 +2530,15 @@ button.btn-ghost {
   .card-group-left  { left: var(--table-left-safe); top: calc(50vh - 175px); }
   .card-group-right { right: var(--table-right-safe); top: calc(50vh - 175px); }
   .card-group-left {
-    transform: translateY(-50%) scale(0.5);
+    transform: translateY(-50%) scale(0.62);
     transform-origin: left center;
   }
   .card-group-right {
-    transform: translateY(-50%) scale(0.5);
+    transform: translateY(-50%) scale(0.62);
     transform-origin: right center;
   }
   .card-group-top.card-group-up {
-    transform: translateX(-50%) scale(0.62);
+    transform: translateX(-50%) scale(0.72);
     transform-origin: top center;
   }
   .room-guandan .card-group-top.card-group-up {
@@ -2558,6 +2565,11 @@ button.btn-ghost {
     transform: translateX(-50%);
     flex-wrap: wrap;
     padding: 8px;
+  }
+  .btn-last-round {
+    bottom: 240px;
+    left: 50%;
+    transform: translateX(-50%);
   }
   .card-ctx-self { top: auto; bottom: 200px; }
   .card-ctx-left {
@@ -2791,7 +2803,7 @@ button.btn-ghost {
   }
   .room-guandan .card-group-top.card-group-up {
     top: 44px;
-    transform: translateX(-50%) scale(0.45);
+    transform: translateX(-50%) scale(0.55);
     transform-origin: top center;
   }
 
@@ -2799,14 +2811,14 @@ button.btn-ghost {
   .card-group-left {
     top: 44px;
     left: 4px;
-    transform: translateY(0) scale(0.5);
+    transform: translateY(0) scale(0.6);
     transform-origin: top left;
   }
   .card-group-right {
     top: 44px;
     right: 4px;
     left: auto;
-    transform: translateY(0) scale(0.5);
+    transform: translateY(0) scale(0.6);
     transform-origin: top right;
   }
 

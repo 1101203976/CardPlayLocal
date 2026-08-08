@@ -3,4 +3,6 @@ node_modules/
 config.json
 sso-secret.txt
 .env
-.out.log
+# 运行日志不入库
+*.out.log
+*.err.log

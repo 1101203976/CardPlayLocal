@@ -815,9 +815,11 @@ const proto = {
       }
     }
     game.next(posId, data);
+    var lastInfo2 = game.lastCardInfo || {};
+    var trickReset = !!(lastInfo2.posId === posId || !lastInfo2.len);
     this.broadCastRoom('CTX_PLAY_CHANGE', deskId, {
       ctxData: { len: data.length, key: ret.key, type: ret.type, cards: data, posId },
-      posId: game.getContextPosId(), timeout: DOU_DIZHU_STEP_TIMEOUT, isPass
+      posId: game.getContextPosId(), timeout: DOU_DIZHU_STEP_TIMEOUT, isPass, trickReset
     });
     if (game.getStatus() === 3) {
       const result = game.getResult();
@@ -880,7 +882,8 @@ const proto = {
     if (!ret || !ret.status) return;
 
     game.next(posId, data);
-    const trickReset = !!(game.lastCardInfo && !game.lastCardInfo.len);
+    var lastInfo = game.lastCardInfo || {};
+    var trickReset = !!(lastInfo.posId === posId || !lastInfo.len);
     this.broadCastRoom('CTX_PLAY_CHANGE', deskId, {
       ctxData: { len: data.length, key: ret.key, type: ret.type, cards: data, posId },
       posId: game.getContextPosId(),
@@ -1273,7 +1276,7 @@ const proto = {
           const allowMove = status || (isPass && (!room || room.gameType === 'doudizhu'));
           if (allowMove) {
             game.next(posId, data);
-            const trickReset = !!(room && room.gameType === 'guandan' && game.lastCardInfo && !game.lastCardInfo.len);
+            var trickReset = !!(game.lastCardInfo && (game.lastCardInfo.posId === posId || !game.lastCardInfo.len));
             this.broadCastRoom('CTX_PLAY_CHANGE', deskId, {
               ctxData: {
                 len: data.length,
