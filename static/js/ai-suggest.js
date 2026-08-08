@@ -18,7 +18,7 @@
   'use strict';
 
   // ========== 工具 ==========
-  function byValAsc(a, b) { return a.value - b.value; }
+  function byValDesc(a, b) { return b.value - a.value; }
   function isJoker(v) { return v === 16 || v === 17; }
 
   function groupByValue(cards) {
@@ -385,7 +385,7 @@
   function suggest(myCards, lastInfo) {
     if (!myCards || !myCards.length) return [];
     var hand = myCards.map(function (c) { return { value: c.value, type: c.type }; });
-    hand.sort(byValAsc);
+    hand.sort(byValDesc);
 
     var freeMode = !lastInfo || !lastInfo.len || lastInfo.ctxPos === 'self';
     if (freeMode) return freePlay(hand);

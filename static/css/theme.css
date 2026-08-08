@@ -126,3 +126,14 @@
 @media (max-width: 900px) and (max-height: 480px) and (orientation: landscape) {
   :root { --card-w: 46px; --card-h: 61px; }
 }
+
+/* 竖屏模式（手机竖持）自动启用 */
+@media (orientation: portrait) and (max-width: 480px) {
+  :root { --card-w: 40px; --card-h: 53px; }
+}
+@media (orientation: portrait) and (min-width: 481px) and (max-width: 600px) {
+  :root { --card-w: 44px; --card-h: 59px; }
+}
+@media (orientation: portrait) and (min-width: 601px) and (max-width: 768px) {
+  :root { --card-w: 50px; --card-h: 67px; }
+}

@@ -66,7 +66,7 @@ Object.assign(
           maxIndex--;
         }
         group = group.sort(function (a, b) {
-          return a.value - b.value;
+          return b.value - a.value;
         });
         ret.push({ id: i, cards: group });
       }

@@ -147,10 +147,28 @@
         </div>
         <div class="room-top-actions">
           <span>{{currentRoomPlayers}} / {{gameType === 'guandan' ? 4 : 3}} 人</span>
+          <button type="button" class="btn-ghost btn-mute" @click="toggleMute" :title="muted ? '开启音效' : '静音'">{{muted ? '♪ 静音' : '♪ 音效'}}</button>
           <button type="button" class="btn-ghost" @click="copyRoomCode(roomCode || deskId)">复制房号</button>
           <button type="button" class="btn-ghost" @click="openRules">规则</button>
         </div>
       </div>
+
+      <!-- 竖屏房号浮标（桌面端隐藏） -->
+      <div class="room-code-float" v-if="roomCode"
+        @mouseenter="showRoomCodeFloat()"
+        @mouseleave="hideRoomCodeFloatDelayed()">
+        <span class="room-code-float-badge">#{{roomCode || deskId}}</span>
+        <div class="room-code-float-panel" v-show="roomCodeFloatVisible">
+          <strong>{{gameTypeName(gameType)}}</strong>
+          <span>房号 {{roomCode || deskId}}</span>
+          <span v-if="gameType === 'guandan'">打 {{guandanLevelLabel}}</span>
+          <button type="button" @click="copyRoomCode(roomCode || deskId)">复制房号</button>
+        </div>
+      </div>
+
+      <!-- 竖屏禁音浮标（桌面端隐藏） -->
+      <button type="button" class="btn-mute-float" @click="toggleMute"
+        :title="muted ? '开启音效' : '静音'">{{muted ? '🔇' : '🔊'}}</button>
 
       <!-- 掼蛋队伍计分板 -->
       <div class="guandan-board" v-if="gameType === 'guandan'">
@@ -189,14 +207,17 @@
           <button class="btn btn-call" @click="callScore(0)">不叫</button>
         </template>
         <template v-if="roomState.state === 2">
-          <button class="btn btn-vermilion" @click="playCards">出  牌</button>
-          <button class="btn btn-ghost btn-ai" type="button" @click="aiSuggest" title="智囊推荐">智 囊</button>
           <button class="btn btn-jade" @click="passCards" v-if="roomState.ctxCard.len && roomState.ctxCard.ctxPos !== roomState.ctxPos">不  出</button>
+          <button class="btn btn-ghost btn-ai" type="button" @click="aiSuggest" title="提示">提 示</button>
+          <button class="btn btn-vermilion" @click="playCards">出  牌</button>
         </template>
 
       </div>
 
       <button v-if="!isSpec && posState.self.state < 2" @click="prepare" class="btn-prepare">准 备</button>
+
+      <!-- 查看上一轮按钮 -->
+      <button v-if="!isSpec && hasLastRound" class="btn-last-round" :class="{'ctx-active': showLastRound}" @click="toggleLastRound">{{showLastRound ? '还原' : '查看上一轮'}}</button>
 
       <!-- 等待区操作：召唤AI / 请走AI -->
       <div class="bot-bar" v-if="!isSpec && (roomState.state === 0 || roomState.state === 3)">
@@ -264,12 +285,12 @@
       <!-- 出牌区域 -->
       <div class="screen-center">
         <!-- 左家的出牌区域 -->
-        <div class="card-ctx card-ctx-left" v-if="(roomState.state === 2 && (posState.left.ctxCards.length || posState.left.isPass)) || (roomState.state === 1 && posState.left.callScore > -1)" :style="handGroupStyle(posState.left.ctxCards, 'ctxSide')">
+        <div class="card-ctx card-ctx-left" :class="{'ctx-last-round': showLastRound}" v-if="(roomState.state === 2 && (ctxDisplayVisible('left'))) || (roomState.state === 1 && posState.left.callScore > -1)" :style="handGroupStyle(ctxDisplayCards('left'), 'ctxSide')">
           <template v-if="roomState.state === 2">
-            <div v-if="!posState.left.isPass" @dragStart="dragStart($event)" v-for="(card,index) in posState.left.ctxCards"
-              class="card" :class="'card-' + card.value + '-' + card.type" :style="{left:index * handGap(posState.left.ctxCards, 'ctxSide') + 'px'}">
+            <div v-if="!ctxDisplayPass('left')" @dragStart="dragStart($event)" v-for="(card,index) in ctxDisplayCards('left')"
+              class="card" :class="'card-' + card.value + '-' + card.type" :style="{left:index * handGap(ctxDisplayCards('left'), 'ctxSide') + 'px'}">
             </div>
-            <div v-if="posState.left.isPass" class="score-tipe pass-tipe">
+            <div v-if="ctxDisplayPass('left')" class="score-tipe pass-tipe">
               不出
             </div>
           </template>
@@ -278,12 +299,12 @@
 
         </div>
         <!-- 自己的出牌区域 -->
-        <div class="card-ctx card-ctx-self" v-if="(roomState.state === 2 && (posState.self.ctxCards.length || posState.self.isPass)) || (roomState.state === 1 && posState.self.callScore > -1)" :style="handGroupStyle(posState.self.ctxCards, 'ctxSelf')">
+        <div class="card-ctx card-ctx-self" :class="{'ctx-last-round': showLastRound}" v-if="(roomState.state === 2 && (ctxDisplayVisible('self'))) || (roomState.state === 1 && posState.self.callScore > -1)" :style="handGroupStyle(ctxDisplayCards('self'), 'ctxSelf')">
           <template v-if="roomState.state === 2">
-            <div v-if="!posState.self.isPass" @dragStart="dragStart($event)" v-for="(card,index) in posState.self.ctxCards"
-              class="card" :class="'card-' + card.value + '-' + card.type" :style="{left:index * handGap(posState.self.ctxCards, 'ctxSelf') + 'px'}">
+            <div v-if="!ctxDisplayPass('self')" @dragStart="dragStart($event)" v-for="(card,index) in ctxDisplayCards('self')"
+              class="card" :class="'card-' + card.value + '-' + card.type" :style="{left:index * handGap(ctxDisplayCards('self'), 'ctxSelf') + 'px'}">
             </div>
-            <div v-if="posState.self.isPass" class="score-tipe pass-tipe">
+            <div v-if="ctxDisplayPass('self')" class="score-tipe pass-tipe">
               不出
             </div>
           </template>
@@ -294,12 +315,12 @@
 
         </div>
         <!-- 右家的出牌区域 -->
-        <div class="card-ctx card-ctx-right" v-if="(roomState.state === 2 && (posState.right.ctxCards.length || posState.right.isPass)) || (roomState.state === 1 && posState.right.callScore > -1)" :style="handGroupStyle(posState.right.ctxCards, 'ctxSide')">
+        <div class="card-ctx card-ctx-right" :class="{'ctx-last-round': showLastRound}" v-if="(roomState.state === 2 && (ctxDisplayVisible('right'))) || (roomState.state === 1 && posState.right.callScore > -1)" :style="handGroupStyle(ctxDisplayCards('right'), 'ctxSide')">
           <template v-if="roomState.state === 2">
-            <div v-if="!posState.right.isPass" @dragStart="dragStart($event)" v-for="(card,index) in posState.right.ctxCards"
-              class="card" :class="'card-' + card.value + '-' + card.type" :style="{left:index * handGap(posState.right.ctxCards, 'ctxSide') + 'px'}">
+            <div v-if="!ctxDisplayPass('right')" @dragStart="dragStart($event)" v-for="(card,index) in ctxDisplayCards('right')"
+              class="card" :class="'card-' + card.value + '-' + card.type" :style="{left:index * handGap(ctxDisplayCards('right'), 'ctxSide') + 'px'}">
             </div>
-            <div v-if="posState.right.isPass" class="score-tipe pass-tipe">
+            <div v-if="ctxDisplayPass('right')" class="score-tipe pass-tipe">
               不出
             </div>
           </template>
@@ -308,12 +329,12 @@
 
         </div>
         <!-- 上家的出牌区域（掼蛋） -->
-        <div class="card-ctx card-ctx-top" v-if="gameType === 'guandan' && roomState.state === 2 && (posState.top.ctxCards.length || posState.top.isPass)" :style="handGroupStyle(posState.top.ctxCards, 'ctxTop')">
+        <div class="card-ctx card-ctx-top" :class="{'ctx-last-round': showLastRound}" v-if="gameType === 'guandan' && roomState.state === 2 && (ctxDisplayVisible('top'))" :style="handGroupStyle(ctxDisplayCards('top'), 'ctxTop')">
           <template v-if="roomState.state === 2">
-            <div v-if="!posState.top.isPass" @dragStart="dragStart($event)" v-for="(card,index) in posState.top.ctxCards"
-              class="card" :class="'card-' + card.value + '-' + card.type" :style="{left:index * handGap(posState.top.ctxCards, 'ctxTop') + 'px'}">
+            <div v-if="!ctxDisplayPass('top')" @dragStart="dragStart($event)" v-for="(card,index) in ctxDisplayCards('top')"
+              class="card" :class="'card-' + card.value + '-' + card.type" :style="{left:index * handGap(ctxDisplayCards('top'), 'ctxTop') + 'px'}">
             </div>
-            <div v-if="posState.top.isPass" class="score-tipe pass-tipe">
+            <div v-if="ctxDisplayPass('top')" class="score-tipe pass-tipe">
               不出
             </div>
           </template>
@@ -405,13 +426,7 @@
       </div>
     </div>
 
-    <div class="landscape-lock" v-if="where === 2">
-      <div class="landscape-lock-panel">
-        <span class="landscape-lock-icon">↺</span>
-        <div class="landscape-lock-title">请横屏游戏</div>
-        <div class="landscape-lock-text">手机端牌桌只支持横屏布局，旋转屏幕后继续对局。</div>
-      </div>
-    </div>
+    <!-- 竖屏已支持，landscape-lock 不再需要 -->
 
   </div>
   <script>
@@ -479,6 +494,8 @@
         return {
           msgList: [],//聊天消息
           chatCollapsed: false,//聊天面板收起态
+          roomCodeFloatVisible: false,//竖屏房号浮标展开态
+          _roomCodeFloatTimer: null,//房号浮标自动隐藏定时器
           _msgSeq: 0,//本地消息序号兜底，避免 :key 冲突
           isSpec: false,//是否处于观战模式
           muted: false,//全局静音
@@ -490,11 +507,17 @@
             team1: 0
           },
           guandanLastOrder: [],
+          showLastRound: false,
+          _lastRoundTimer: null,
+          lastRoundCards: {
+            left: [], right: [], top: [], self: [],
+            leftIsPass: false, rightIsPass: false, topIsPass: false, selfIsPass: false
+          },
 
           where: 0,//0登录界面 1大厅 2房间,
           isAutoLogin: false,
-          authMode: getURLParam('auth') === 'guest' ? 'guest' : 'discuz',// 登录分支：discuz=论坛/访客，guest=普通游客
-          guestMode: getURLParam('auth') === 'guest',// 选择以访客身份进入
+          authMode: 'guest',// 登录分支：直接访客，跳过论坛登录
+          guestMode: true,// 直接以访客身份进入
           loginError: '',//登录错误持久横幅
           debugMode: /[?&]debug=1\b/.test(location.search),//?debug=1 显示调试信息
           tokenSnippet: '',//最近一次握手用的 token 前后段（仅在 debug 显示）
@@ -847,7 +870,7 @@
               })
             }
             this.posState[direct].cards = this.posState[direct].cards.concat(data.topCards).sort(function (a, b) {
-              return a.value - b.value;
+              return b.value - a.value;
             });
             this.posState.kitty.cards = data.topCards;
             this.roomState.ctxPos = direct;
@@ -870,6 +893,19 @@
 
           this.client.on('CTX_PLAY_CHANGE', function (data) {
             var direct = this.getDirectionByPosId(data.ctxData.posId);
+            // 记录上一轮（一圈）各家的出牌，供“查看上一轮”按钮回放
+            if (data.trickReset) {
+              this.lastRoundCards = {
+                left: this.posState.left.ctxCards.slice(),
+                right: this.posState.right.ctxCards.slice(),
+                top: this.posState.top.ctxCards.slice(),
+                self: this.posState.self.ctxCards.slice(),
+                leftIsPass: this.posState.left.isPass,
+                rightIsPass: this.posState.right.isPass,
+                topIsPass: this.posState.top.isPass,
+                selfIsPass: this.posState.self.isPass
+              };
+            }
             this.posState[direct].ctxCards = data.ctxData.cards;
             this.posState[direct].isPass = data.isPass;
             if (data.trickReset) {
@@ -1308,6 +1344,32 @@
             fallbackCopy();
           }
         },
+        showRoomCodeFloat: function () {
+          var self = this;
+          if (window.FX) FX.beep('chip');
+          this.roomCodeFloatVisible = true;
+          if (this._roomCodeFloatTimer) {
+            clearTimeout(this._roomCodeFloatTimer);
+            this._roomCodeFloatTimer = null;
+          }
+          // 每次展开后 3s 无操作自动收起
+          this._roomCodeFloatTimer = setTimeout(function () {
+            self.roomCodeFloatVisible = false;
+            self._roomCodeFloatTimer = null;
+          }, 3000);
+        },
+        hideRoomCodeFloatDelayed: function () {
+          var self = this;
+          // 鼠标移开后 3s 无操作自动隐藏
+          if (this._roomCodeFloatTimer) {
+            clearTimeout(this._roomCodeFloatTimer);
+            this._roomCodeFloatTimer = null;
+          }
+          this._roomCodeFloatTimer = setTimeout(function () {
+            self.roomCodeFloatVisible = false;
+            self._roomCodeFloatTimer = null;
+          }, 3000);
+        },
         openRules: function () {
           var isGd = this.selectedGameType === 'guandan' || this.gameType === 'guandan';
           var title = isGd ? '掼蛋规则' : '斗地主规则';
@@ -1459,6 +1521,13 @@
         cardPixelWidth: function () {
           var w = window.innerWidth || this.viewportWidth || 1280;
           var h = window.innerHeight || 720;
+          var isPortrait = h > w;
+          if (isPortrait) {
+            if (w <= 480) return 40;
+            if (w <= 600) return 44;
+            if (w <= 768) return 50;
+            return 70;
+          }
           if (w <= 900 && h <= 480 && w > h) return 46;
           if (w <= 640) return 54;
           if (w <= 1024) return 70;
@@ -1467,6 +1536,16 @@
         handMaxWidth: function (zone) {
           var w = window.innerWidth || this.viewportWidth || 1280;
           var h = window.innerHeight || 720;
+          var isPortrait = h > w;
+          if (isPortrait) {
+            if (zone === 'self') return w - 16;
+            if (zone === 'side') return Math.max(120, Math.floor(w / 2) - 16);
+            if (zone === 'top') return Math.max(140, w - 24);
+            if (zone === 'ctxSelf') return Math.max(180, w - 24);
+            if (zone === 'ctxSide') return Math.max(150, Math.floor(w / 2) - 16);
+            if (zone === 'ctxTop') return Math.max(160, w - 24);
+            if (zone === 'kitty') return 130;
+          }
           var compactLandscape = w <= 900 && h <= 480 && w > h;
           if (compactLandscape) {
             if (zone === 'self') return Math.max(260, w - 40);
@@ -1546,6 +1625,13 @@
         tableTopSafePx: function () {
           var w = window.innerWidth || this.viewportWidth || 1280;
           var h = window.innerHeight || 720;
+          if (h > w) {
+            // 竖屏：顶部玩家与出牌区下移，避开竖屏顶部
+            if (w <= 480) return 210;
+            if (w <= 600) return 230;
+            if (w <= 768) return 250;
+            return 150;
+          }
           if (w <= 900 && h <= 480 && w > h) return 54;
           if (w <= 480) return 146;
           if (w <= 768) return 150;
@@ -1614,6 +1700,11 @@
           this.posState.right.ctxCards = [];
           this.posState.top.ctxCards = [];
           this.posState.self.ctxCards = [];
+          this.lastRoundCards = {
+            left: [], right: [], top: [], self: [],
+            leftIsPass: false, rightIsPass: false, topIsPass: false, selfIsPass: false
+          };
+          this.showLastRound = false;
           this.posState.left.isBot = false;
           this.posState.right.isBot = false;
           this.posState.top.isBot = false;
@@ -1862,6 +1953,34 @@
             setTimeout(function () { window.FX && FX.setMuted(self.muted); }, 50);
           }
         },
+        // 查看上一轮：需要展示的牌
+        ctxDisplayCards: function (direct) {
+          return this.showLastRound ? this.lastRoundCards[direct] : this.posState[direct].ctxCards;
+        },
+        // 查看上一轮：是否需要展示“不出”
+        ctxDisplayPass: function (direct) {
+          return this.showLastRound ? this.lastRoundCards[direct + 'IsPass'] : this.posState[direct].isPass;
+        },
+        // 查看上一轮：出牌区是否可见
+        ctxDisplayVisible: function (direct) {
+          if (this.roomState.state !== 2) return false;
+          var cards = this.ctxDisplayCards(direct);
+          return (cards && cards.length) || this.ctxDisplayPass(direct);
+        },
+        toggleLastRound: function () {
+          if (this.showLastRound) {
+            this.showLastRound = false;
+            this._lastRoundTimer && clearTimeout(this._lastRoundTimer);
+            this._lastRoundTimer = null;
+          } else {
+            this.showLastRound = true;
+            var self = this;
+            this._lastRoundTimer = setTimeout(function () {
+              self.showLastRound = false;
+              self._lastRoundTimer = null;
+            }, 2000);
+          }
+        },
         // AI 智囊：自动选牌
         aiSuggest: function () {
           if (this.isSpec) return;
@@ -1890,7 +2009,8 @@
           this.posState.self.cards.forEach(function (c) { c.selected = false; });
           if (!picks || !picks.length) {
             window.FX && FX.beep('tick');
-            return layer.msg('无可压制的牌，建议「不出」');
+            // 没有可出的牌时自动不出
+            return this.passCards();
           }
           // 把建议的牌打勾（按 value+type 匹配，且每张只标记一次）
           var used = {};
@@ -1967,6 +2087,14 @@
         // 是否有 AI 在场
         hasBotSeat: function () {
           return this.posState.left.isBot || this.posState.right.isBot || this.posState.top.isBot;
+        },
+        // 是否有上一轮出牌记录可查看
+        hasLastRound: function () {
+          if (this.roomState.state !== 2) return false;
+          return this.lastRoundCards.left.length > 0 || this.lastRoundCards.right.length > 0
+            || this.lastRoundCards.top.length > 0 || this.lastRoundCards.self.length > 0
+            || this.lastRoundCards.leftIsPass || this.lastRoundCards.rightIsPass
+            || this.lastRoundCards.topIsPass || this.lastRoundCards.selfIsPass;
         },
         // 记分板列表（按出现顺序）
         scoreList: function () {

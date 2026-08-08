@@ -807,6 +807,30 @@ button.btn-ghost {
 }
 .btn-exit-room:hover { background: var(--glass-bg-strong); box-shadow: 0 0 0 1px var(--gold-400); }
 
+/* 查看上一轮按钮 */
+.btn-last-round {
+  position: fixed;
+  bottom: 8px;
+  right: 8px;
+  z-index: 70;
+  padding: 6px 14px;
+  font-family: var(--font-serif);
+  font-size: 13px;
+  letter-spacing: 0.05em;
+  color: var(--text);
+  background: rgba(0,0,0,0.45);
+  border: 1px solid var(--gold-line);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all .2s var(--ease-soft);
+}
+.btn-last-round:hover { color: var(--gold); border-color: var(--gold-soft); box-shadow: 0 0 12px rgba(208,168,92,0.3); }
+.btn-last-round.ctx-active { color: var(--gold); border-color: var(--gold); }
+
+/* 查看上一轮：回放片段的半透明样式 */
+.ctx-last-round .card { opacity: 0.85; }
+.ctx-last-round .pass-tipe { opacity: 0.85; }
+
 /* 准备按钮 */
 .btn-prepare {
   position: fixed;
@@ -1000,12 +1024,14 @@ button.btn-ghost {
 
 /* —— 左家 / 右家 —— */
 .card-group-left {
-  top: 50%; left: var(--table-left-safe);
-  transform: translateY(-50%);
+  top: calc(50vh - 175px); left: var(--table-left-safe);
+  transform: scale(0.7);
+  transform-origin: bottom left;
 }
 .card-group-right {
-  top: 50%; right: var(--table-right-safe); left: auto;
-  transform: translateY(-50%);
+  top: calc(50vh - 175px); right: var(--table-right-safe); left: auto;
+  transform: scale(0.7);
+  transform-origin: bottom right;
 }
 
 /* 中央出牌区 */
@@ -1024,16 +1050,21 @@ button.btn-ghost {
   animation: ctx-float-in 320ms var(--ease-back) both;
   z-index: 76;
 }
+/* 打出去的牌整体缩小，避免遮挡桌面 */
+.card-ctx .card {
+  transform: scale(0.8);
+  transform-origin: center bottom;
+}
 .card-ctx-self {
   top: auto;
-  bottom: 286px;
+  bottom: 214px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 78;
   animation-name: ctx-float-in-center;
 }
-.card-ctx-left  { top: calc(50vh - 220px); left: clamp(240px, calc(50vw - 280px), 720px); }
-.card-ctx-right { top: calc(50vh - 220px); right: clamp(240px, calc(50vw - 280px), 720px); }
+.card-ctx-left  { top: calc(50vh - 60px); left: calc(var(--table-left-safe) - 10px); }
+.card-ctx-right { top: calc(50vh - 60px); right: calc(var(--table-right-safe) - 10px); }
 .card-ctx-top   { top: calc(var(--table-top-safe) + var(--card-h) + 34px); left: 50%; transform: translateX(-50%); animation-name: ctx-float-in-center; }
 
 /* 叫分 / 不出 提示 */
@@ -1070,54 +1101,7 @@ button.btn-ghost {
   border-color: rgba(208, 168, 92, 0.42);
 }
 
-.landscape-lock {
-  display: none;
-}
-@media (max-width: 900px) and (orientation: portrait) {
-  .landscape-lock {
-    position: fixed;
-    inset: 0;
-    z-index: 9999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 28px;
-    text-align: center;
-    color: var(--text);
-    background:
-      radial-gradient(circle at 50% 28%, rgba(212,168,90,0.18), transparent 34%),
-      var(--grad-arena);
-  }
-  .landscape-lock-panel {
-    width: min(320px, 100%);
-    padding: 26px 22px;
-    border: 1px solid var(--glass-border-gold);
-    border-radius: var(--radius-lg);
-    background: rgba(9, 28, 26, 0.88);
-    box-shadow: var(--shadow-lg), var(--inner-light);
-  }
-  .landscape-lock-icon {
-    display: block;
-    margin-bottom: 12px;
-    font-family: var(--font-brush);
-    font-size: 44px;
-    line-height: 1;
-    color: var(--gold-300);
-  }
-  .landscape-lock-title {
-    margin-bottom: 8px;
-    font-family: var(--font-serif);
-    font-size: 20px;
-    font-weight: 700;
-    letter-spacing: 0.16em;
-    color: var(--gold-200);
-  }
-  .landscape-lock-text {
-    font-size: 13px;
-    line-height: 1.7;
-    color: var(--text-soft);
-  }
-}
+/* 竖屏已支持，landscape-lock 已移除 */
 
 /* 剩余牌数 / 计时器外置 */
 .text-tips {
@@ -1986,11 +1970,11 @@ button.btn-ghost {
 }
 .room-guandan .card-ctx-left {
   /* 掼蛋四人局出牌区按菱形分区摆放，避免互相盖牌。 */
-  top: calc(50vh - var(--card-h) / 2 - 10px);
+  top: calc(50vh - 60px);
   left: calc(50% - 360px);
 }
 .room-guandan .card-ctx-right {
-  top: calc(50vh - var(--card-h) / 2 - 10px);
+  top: calc(50vh - 60px);
   right: calc(50% - 360px);
 }
 @media (max-width: 720px) {
@@ -2091,26 +2075,26 @@ button.btn-ghost {
   .room-topbar {
     width: min(620px, calc(100vw - 300px));
   }
-  .card-group-left  { left: var(--table-left-safe); }
-  .card-group-right { right: var(--table-right-safe); }
+  .card-group-left  { left: var(--table-left-safe); top: calc(50vh - 175px); }
+  .card-group-right { right: var(--table-right-safe); top: calc(50vh - 175px); }
   .card-group-self  {
     left: 50%;
     max-width: calc(100vw - 16px);
   }
   .card-group-top.card-group-up { top: var(--table-top-safe); }
-  .card-ctx-left    { top: calc(50vh - 184px); left: clamp(170px, calc(50vw - 240px), 320px); }
-  .card-ctx-right   { top: calc(50vh - 184px); right: clamp(170px, calc(50vw - 240px), 320px); }
+  .card-ctx-left    { top: calc(50vh - 60px); left: calc(var(--table-left-safe) - 10px); }
+  .card-ctx-right   { top: calc(50vh - 60px); right: calc(var(--table-right-safe) - 10px); }
   .card-ctx-top     { top: calc(var(--table-top-safe) + var(--card-h) + 24px); }
   .room-guandan .card-ctx-top { left: 50%; top: calc(var(--table-top-safe) + var(--card-h) + 10px); }
   .room-guandan .card-ctx-left {
-    top: calc(50vh - var(--card-h) / 2 + 8px);
+    top: calc(50vh - 60px);
     left: calc(50% - 250px);
   }
   .room-guandan .card-ctx-right {
-    top: calc(50vh - var(--card-h) / 2 + 8px);
+    top: calc(50vh - 60px);
     right: calc(50% - 250px);
   }
-  .card-ctx-self    { top: auto; bottom: 244px; }
+  .card-ctx-self    { top: auto; bottom: 200px; }
   .player-left      { left: calc(var(--table-left-safe) - 118px); top: calc(50vh - 58px); }
   .player-self-ctx  { left: clamp(16px, calc(50vw - 360px), 170px); right: auto; top: auto; bottom: calc(44px + var(--card-h) + 10px); }
   .player-right     { right: calc(var(--table-right-safe) - 118px); top: calc(50vh - 58px); }
@@ -2242,23 +2226,23 @@ button.btn-ghost {
     justify-content: center;
     flex-wrap: wrap;
   }
-  .card-group-left  { left: var(--table-left-safe); }
-  .card-group-right { right: var(--table-right-safe); }
+  .card-group-left  { left: var(--table-left-safe); top: calc(50vh - 175px); }
+  .card-group-right { right: var(--table-right-safe); top: calc(50vh - 175px); }
   .card-group-top.card-group-up { top: var(--table-top-safe); }
   .room-guandan .card-group-top.card-group-up { top: 220px; }
-  .card-ctx-left    { left: 96px; top: calc(50vh - 190px); }
-  .card-ctx-right   { right: 96px; top: calc(50vh - 190px); }
+  .card-ctx-left    { left: 96px; top: calc(50vh - 60px); }
+  .card-ctx-right   { right: 96px; top: calc(50vh - 60px); }
   .card-ctx-top     { top: calc(var(--table-top-safe) + var(--card-h) + 18px); }
   .room-guandan .card-ctx-top { top: 326px; }
   .room-guandan .card-ctx-left {
     left: calc(50% - 220px);
-    top: calc(50vh - var(--card-h) / 2);
+    top: calc(50vh - 60px);
   }
   .room-guandan .card-ctx-right {
     right: calc(50% - 220px);
-    top: calc(50vh - var(--card-h) / 2);
+    top: calc(50vh - 60px);
   }
-  .card-ctx-self    { top: auto; bottom: 254px; }
+  .card-ctx-self    { top: auto; bottom: 200px; }
   .player-left,
   .player-right     { display: none; }
   .player-top       { top: calc(var(--table-top-safe) + var(--card-h) + 16px); }
@@ -2363,7 +2347,7 @@ button.btn-ghost {
 
 @media (max-width: 768px) and (max-height: 360px) {
   .btn-group { bottom: 118px; }
-  .card-ctx-self { bottom: 206px; }
+  .card-ctx-self { bottom: 170px; }
 }
 @media (max-width: 900px) and (max-height: 480px) and (orientation: landscape) {
   .room {
@@ -2431,11 +2415,11 @@ button.btn-ghost {
   }
   .card-group-left {
     left: var(--table-left-safe);
-    top: 51%;
+    top: calc(50vh - 175px);
   }
   .card-group-right {
     right: var(--table-right-safe);
-    top: 51%;
+    top: calc(50vh - 175px);
   }
   .card-group-self {
     bottom: 10px;
@@ -2461,15 +2445,15 @@ button.btn-ghost {
     font-size: 15px;
   }
   .card-ctx-self {
-    bottom: 122px;
+    bottom: 100px;
   }
   .card-ctx-left {
     left: calc(50% - 222px);
-    top: calc(50vh - var(--card-h) / 2);
+    top: calc(50vh - 60px);
   }
   .card-ctx-right {
     right: calc(50% - 222px);
-    top: calc(50vh - var(--card-h) / 2);
+    top: calc(50vh - 60px);
   }
   .card-ctx-top {
     top: calc(var(--table-top-safe) + var(--card-h) + 8px);
@@ -2479,11 +2463,11 @@ button.btn-ghost {
   }
   .room-guandan .card-ctx-left {
     left: calc(50% - 230px);
-    top: calc(50vh - var(--card-h) / 2);
+    top: calc(50vh - 60px);
   }
   .room-guandan .card-ctx-right {
     right: calc(50% - 230px);
-    top: calc(50vh - var(--card-h) / 2);
+    top: calc(50vh - 60px);
   }
   .room-playing .score-board,
   .room-playing .guandan-board,
@@ -2536,8 +2520,8 @@ button.btn-ghost {
   .position1 { bottom: 16px; left: 18px; }
   .position2 { bottom: 16px; right: 18px; }
   .position3 { top: 56px; right: 18px; }
-  .card-group-left  { left: var(--table-left-safe); }
-  .card-group-right { right: var(--table-right-safe); }
+  .card-group-left  { left: var(--table-left-safe); top: calc(50vh - 175px); }
+  .card-group-right { right: var(--table-right-safe); top: calc(50vh - 175px); }
   .card-group-left {
     transform: translateY(-50%) scale(0.5);
     transform-origin: left center;
@@ -2575,14 +2559,14 @@ button.btn-ghost {
     flex-wrap: wrap;
     padding: 8px;
   }
-  .card-ctx-self { top: auto; bottom: 250px; }
+  .card-ctx-self { top: auto; bottom: 200px; }
   .card-ctx-left {
     left: 40px;
-    top: calc(50vh - 210px);
+    top: calc(50vh - 60px);
   }
   .card-ctx-right {
     right: 40px;
-    top: calc(50vh - 210px);
+    top: calc(50vh - 60px);
   }
   .card-ctx-left .card,
   .card-ctx-right .card {
@@ -2597,11 +2581,11 @@ button.btn-ghost {
   .room-guandan .card-ctx-top { left: 50%; top: 286px; }
   .room-guandan .card-ctx-left {
     left: calc(50% - 160px);
-    top: calc(50vh - var(--card-h) / 2);
+    top: calc(50vh - 60px);
   }
   .room-guandan .card-ctx-right {
     right: calc(50% - 160px);
-    top: calc(50vh - var(--card-h) / 2);
+    top: calc(50vh - 60px);
   }
   .room-guandan .player-left,
   .room-guandan .player-right,
@@ -2671,6 +2655,289 @@ button.btn-ghost {
   .guandan-team-row span,
   .guandan-order {
     display: none;
+  }
+}
+
+/* ========== 竖屏房号浮标（桌面端隐藏） ========== */
+.room-code-float {
+  display: none;
+  position: fixed;
+  top: 6px;
+  right: 10px;
+  z-index: 1000;
+  cursor: pointer;
+}
+.room-code-float-badge {
+  display: inline-block;
+  background: var(--glass-bg-strong);
+  border: 1px solid var(--glass-border-gold);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-radius: var(--radius-pill);
+  padding: 3px 12px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 0.04em;
+  box-shadow: var(--shadow-sm);
+  transition: all var(--dur-fast) var(--ease-soft);
+}
+.room-code-float-badge:hover {
+  box-shadow: var(--shadow-glow-gold);
+}
+.room-code-float-panel {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 6px;
+  min-width: 160px;
+  background: rgba(10, 20, 22, 0.94);
+  border: 1px solid var(--glass-border-gold);
+  backdrop-filter: var(--glass-blur-strong);
+  -webkit-backdrop-filter: var(--glass-blur-strong);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.room-code-float-panel strong {
+  color: var(--gold);
+  font-size: 14px;
+}
+.room-code-float-panel span {
+  color: var(--text-soft);
+  font-size: 12px;
+}
+.room-code-float-panel button {
+  background: var(--gold);
+  color: var(--ink-900);
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease-soft);
+  margin-top: 4px;
+}
+.room-code-float-panel button:hover {
+  background: var(--gold-300);
+  box-shadow: var(--shadow-glow-gold);
+}
+
+/* 竖屏模式显示房号浮标 */
+@media (orientation: portrait) and (max-width: 768px) {
+  :root {
+    --table-top-safe: 52px;
+    --table-left-safe: 8px;
+    --table-right-safe: 8px;
+  }
+
+  /* 隐藏顶部房号栏和聊天框 */
+  .room-topbar { display: none; }
+  .msg-box { display: none; }
+  .room-playing .msg-box { display: none; }
+
+  /* 显示房号浮标 */
+  .room-code-float { display: block; }
+
+  /* 竖屏禁音按钮 */
+  .btn-mute-float {
+    display: flex;
+    position: fixed;
+    top: 6px;
+    right: 6px;
+    z-index: 1100;
+    width: 36px;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.45);
+    color: #fff;
+    font-size: 16px;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+
+  /* 隐藏左右玩家头像 */
+  .player-left, .player-right,
+  .room-guandan .player-left, .room-guandan .player-right,
+  .room-playing .player-left, .room-playing .player-right {
+    display: none;
+  }
+
+  /* 顶部玩家头像移到最上方，缩小 */
+  .player-top {
+    top: 2px;
+    left: 50%;
+    transform: translateX(-50%) scale(0.7);
+  }
+  .room-guandan .player-top {
+    left: 50%;
+    top: 2px;
+    transform: translateX(-50%) scale(0.7);
+  }
+
+  /* 顶部玩家手牌缩小 */
+  .card-group-top {
+    top: 44px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  .room-guandan .card-group-top.card-group-up {
+    top: 44px;
+    transform: translateX(-50%) scale(0.45);
+    transform-origin: top center;
+  }
+
+  /* 左右手牌移到顶部两侧 */
+  .card-group-left {
+    top: 44px;
+    left: 4px;
+    transform: translateY(0) scale(0.5);
+    transform-origin: top left;
+  }
+  .card-group-right {
+    top: 44px;
+    right: 4px;
+    left: auto;
+    transform: translateY(0) scale(0.5);
+    transform-origin: top right;
+  }
+
+  /* 出牌区整体上移，紧凑排列在顶部区域下方 */
+  .card-ctx-left {
+    top: 90px;
+    left: 8px;
+  }
+  .card-ctx-right {
+    top: 90px;
+    right: 8px;
+  }
+  .card-ctx-top {
+    top: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  .card-ctx-left .card,
+  .card-ctx-right .card {
+    transform: scale(0.72);
+    transform-origin: top left;
+  }
+  .card-ctx-top .card {
+    transform: scale(0.82);
+    transform-origin: top left;
+  }
+  .room-guandan .card-ctx-left {
+    top: 90px;
+    left: 8px;
+  }
+  .room-guandan .card-ctx-right {
+    top: 90px;
+    right: 8px;
+  }
+  .room-guandan .card-ctx-top {
+    top: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  .room-guandan .card-ctx-top .card {
+    transform: scale(0.72);
+    transform-origin: top left;
+  }
+
+  /* 自己出牌区上移 */
+  .card-ctx-self {
+    top: auto;
+    bottom: 168px;
+  }
+  /* 自己出牌区内的牌正常大小 */
+  .card-ctx-self .card {
+    transform: scale(0.88);
+  }
+
+  /* 按钮组上移 */
+  .btn-group {
+    bottom: 118px;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    flex-wrap: wrap;
+    padding: 6px;
+  }
+
+  /* 自己手牌底部间距 */
+  .card-group-self {
+    bottom: 34px;
+    left: 50% !important;
+    right: auto;
+    transform: translateX(-50%);
+    max-width: calc(100vw - 8px);
+  }
+  .room-guandan .card-group-self {
+    bottom: 42px;
+  }
+
+  /* 掼蛋信息板移到顶部居中 */
+  .guandan-board {
+    top: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: auto;
+    max-width: 92vw;
+    padding: 4px 10px;
+    min-height: 0;
+  }
+  .guandan-board-title {
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  .guandan-level strong {
+    font-size: 18px;
+  }
+  .guandan-teams {
+    gap: 4px;
+  }
+  .guandan-team-row {
+    padding: 2px 0;
+  }
+  .guandan-team-row strong {
+    font-size: 10px;
+  }
+
+  /* 聊天框位置调整 */
+  .msg-box {
+    bottom: 70px;
+    right: 4px;
+    width: 160px;
+  }
+  .room-playing .msg-box {
+    bottom: 4px;
+  }
+
+  /* 退出房间按钮 */
+  .btn-exit-room {
+    top: 4px;
+    left: 4px;
+    right: auto;
+    padding: 0 10px;
+    letter-spacing: 0.08em;
+    font-size: 12px;
+  }
+
+  /* 观战徽标 */
+  .spec-badge {
+    top: 44px;
+    font-size: 13px;
+    padding: 4px 18px;
   }
 }
 
@@ -2756,6 +3023,10 @@ button.btn-ghost {
   transition: all .2s var(--ease-soft);
 }
 .btn-mute:hover { color: var(--gold); border-color: var(--gold-soft); box-shadow: 0 0 12px rgba(208,168,92,0.3); }
+
+/* 竖屏禁音浮标（桌面端隐藏） */
+.btn-mute-float { display: none; }
+.btn-mute-float:hover { background: rgba(0,0,0,0.65); }
 
 /* 观战按钮 */
 .desk-spectate {

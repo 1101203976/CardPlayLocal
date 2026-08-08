@@ -200,7 +200,7 @@ function discuzAvatarUrl(uid) {
 
 function sortByCard(cards) {
   return cards.slice(0).sort((a, b) => {
-    if (a.value !== b.value) return a.value - b.value;
+    if (a.value !== b.value) return b.value - a.value;
     if (a.type !== b.type) return a.type - b.type;
     return (a.deck || 0) - (b.deck || 0);
   });
