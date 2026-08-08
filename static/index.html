@@ -162,9 +162,10 @@
         </div>
       </div>
 
-      <!-- 竖屏禁音浮标（桌面端隐藏） -->
+      <!-- 竖屏音效开关（桌面端隐藏） -->
       <button type="button" class="btn-mute-float" @click="toggleMute"
-        :title="muted ? '开启音效' : '静音'">{{muted ? '🔇' : '🔊'}}</button>
+        :aria-label="muted ? '开启音效' : '关闭音效'"
+        :title="muted ? '开启音效' : '关闭音效'">{{muted ? '🔇' : '🔊'}}</button>
 
       <!-- 掼蛋队伍计分板 -->
       <div class="guandan-board" v-if="gameType === 'guandan'">
@@ -1534,7 +1535,7 @@
             if (zone === 'side') return Math.max(120, Math.floor(w / 2) - 16);
             if (zone === 'top') return Math.max(140, w - 24);
             if (zone === 'ctxSelf') return Math.max(180, w - 24);
-            if (zone === 'ctxSide') return Math.max(150, Math.floor(w / 2) - 16);
+            if (zone === 'ctxSide') return Math.max(100, Math.floor(w / 2) - 20);
             if (zone === 'ctxTop') return Math.max(160, w - 24);
             if (zone === 'kitty') return 130;
           }
@@ -1982,10 +1983,10 @@
           if (this.roomState.state !== 2 || this.roomState.ctxPos !== 'self') {
             return layer.msg('暂未到出牌时机');
           }
-          // 第二次点击提示 → 直接全选手牌（一键出完）
+          // 第二次点击提示：取消本次建议选中的牌
           if (this._suggestClicked) {
-            this.posState.self.cards.forEach(function (c) { c.selected = true; });
-            window.FX && FX.beep('chip');
+            this.posState.self.cards.forEach(function (c) { c.selected = false; });
+            window.FX && FX.beep('tick');
             this._suggestClicked = false;
             return;
           }

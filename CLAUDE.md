@@ -1,22 +1,22 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+本文件为 Claude Code（claude.ai/code）在此代码仓库中工作时提供指导。
 
-## Overview
+## 项目概述
 
-雀阁 (CardRoomPro) is a real-time online card-room platform: Node.js + Express + Socket.IO backend, Vue 2 (UMD build, no build step) + jQuery frontend. It supports two games — **斗地主 (Doudizhu, 3 players, 1 deck)** and **掼蛋 (Guandan, 4 players, 2 decks)** — with room-based matchmaking, AI bots, spectator mode, letter suggestions (“智囊”), optional MySQL score persistence, and optional Discuz JWT SSO. It runs without a build step; the server serves `static/` directly.
+雀阁（CardRoomPro）是一个实时在线纸牌房平台：后端使用 Node.js 18+、Express 和 Socket.IO，前端使用 Vue 2 UMD 版本和 jQuery，无构建步骤。当前支持两种游戏：**斗地主（3 人、1 副牌）**和**掼蛋（4 人、2 副牌）**，并提供房间匹配、AI 机器人、观战模式、“智囊”出牌建议、可选的 MySQL 积分持久化和 Discuz JWT 单点登录。服务器直接提供 `static/` 下的静态文件。
 
-The project is a continuous refactor of an original Doudizhu fork into a multi-game room platform. The two state machines are deliberately written as two separate, parallel modules rather than a shared abstraction.
+本项目由原始斗地主项目持续重构为多玩法房间平台。两个游戏状态机有意保持为两个独立、平行的模块，不要将它们强行抽象为共享状态机。
 
-## Commands
+## 常用命令
 
 ```bash
-npm install              # install deps (express, socket.io, socket.io-client, jsonwebtoken, mysql2)
-npm start                # = node server.js, listens on PORT (default 8002)
-$env:PORT='8012'; node server.js   # Windows: override port
+npm install              # 安装依赖（express、socket.io、socket.io-client、jsonwebtoken、mysql2）
+npm start                # 等同于 node server.js，监听 PORT，默认 8002
+$env:PORT='8012'; node server.js   # Windows PowerShell：指定端口
 ```
 
-No lint or test tooling exists. The only verification is syntax checking and manual rule regression:
+项目没有构建步骤，`package.json` 也没有定义 lint 或 test 脚本。目前没有自动化测试，因此也没有运行单个测试的命令。验证方式是语法检查和手动规则回归：
 
 ```bash
 node --check server.js
@@ -27,67 +27,80 @@ node --check static/js/guandan-suggest.js
 node --check static/js/effects.js
 ```
 
-Regression checklist for card-rule changes (no automated tests):
-- Guandan sequences `A2345`, `23456`, `10JQKA`; triple-pair (`223344`), double-triple (`333444`), trio-with-pair (`55522`)
-- Straight flush beats ≤5-card bomb; 6+ card bomb beats straight flush; rocket (天王炸) beats everything
-- Doudizhu: bidding, bottom cards, play, settlement
+修改牌型规则后需手动回归：
 
-## Config
+- 掼蛋顺子：`A2345`、`23456`、`10JQKA`
+- 掼蛋三连对（`223344`）、二连三（`333444`）、三带二（`55522`）
+- 同花顺大于不超过 5 张的炸弹；6 张及以上炸弹大于同花顺；天王炸大于所有牌型
+- 斗地主：叫分、底牌、出牌和结算
 
-Startup config priority: **environment variables > root `config.json` > code defaults**. `server.js` loads `config.json` into `process.env` (without overwriting already-set env vars) so downstream modules like `db.js` read via `process.env.*`. Copy `config.example.json` → `config.json` (gitignored). Key vars: `PORT`, `JWT_SECRET`, `DB_HOST/PORT/USER/PASSWORD/NAME/TABLE_PREFIX`, `DB_DISABLE=1` (memory-only), `SCORE_BASE`.
+## 配置
 
-`JWT_SECRET` resolution, in order: `process.env.JWT_SECRET` → `sso-secret.txt` file → placeholder `change_this_in_production`. The SSO health check at `GET /api/sso/health` returns only a SHA-256 fingerprint, deliberately not the secret.
+启动配置优先级为：**环境变量 > 根目录 `config.json` > 代码默认值**。`server.js` 会将 `config.json` 的值载入 `process.env`，但不会覆盖已经设置的环境变量，使 `db.js` 等下游模块都能通过 `process.env.*` 读取配置。复制 `config.example.json` 为 `config.json`；该文件已被 Git 忽略。
 
-## Architecture
+主要配置项包括：`PORT`、`JWT_SECRET`、`DB_HOST`、`DB_PORT`、`DB_USER`、`DB_PASSWORD`、`DB_NAME`、`DB_TABLE_PREFIX`、`DB_DISABLE=1`（仅内存模式）、`SCORE_BASE` 和 `DISCUZ_AVATAR_BASE`。
 
-### Server (`server.js`)
+`JWT_SECRET` 的解析顺序为：`process.env.JWT_SECRET` → `sso-secret.txt` 文件 → 占位值 `change_this_in_production`。`DISCUZ_AVATAR_BASE` 控制备用头像 URL 模板，支持 `{uid}` 占位符。`GET /api/sso/health` 只返回密钥的 SHA-256 指纹，不会返回密钥本身。
 
-The heart of the app. Sets up Express + Socket.IO, then builds a `GameServer` object whose behavior is attached via `Object.assign(GameServer.prototype, proto)` and `proto` holds the reactive event handlers. Key state owned by each `GameServer`:
+## 整体架构
 
-- `clients` — connected sockets, each with `{userName, uid, avatarUrl, socket, deskId, posId}`. `posId === 'spec'` marks a spectator.
-- `desks` — the room list. Each `desk` has `positions[]` (seat state: `0` empty / `1` seated / `2` ready), `gameType`, `roomCode`, `isPrivate`, and for guandan `guandanLevelRank` / `guandanLevelLabel`.
-- `gameDatas[deskId]` — the live `Game` / `GuandanGame` state machine instance for that room.
-- `botTimers[deskId]` — pending AI-action `setTimeout`.
+### 服务端（`server.js`）
 
-Flow: HTTP request → rejected by the `/api` middleware (only GET/HEAD allowed, rate-limited, JSON 404 fallback — the API surface is read-only by design; all score writes happen server-side at game settlement). Socket.IO emits → `proto` handlers mutate desk/position state and broadcast `*_CHANGE` events room-wide or lobby-wide.
+这是项目核心。文件创建 Express 和 Socket.IO 服务，然后定义 `GameServer` 对象；响应式事件处理函数集中在 `proto` 中，并通过 `Object.assign(GameServer.prototype, proto)` 挂载。每个 `GameServer` 维护以下关键状态：
 
-On disconnect/lobby-exit, a room with no remaining humans is cleaned up (`cleanupRoomIfEmpty`): AI removed, timers cleared, `game.init()` reset, desk removed.
+- `clients`：已连接的 Socket 客户端，每项包含 `{userName, uid, avatarUrl, socket, deskId, posId}`；`posId === 'spec'` 表示观战者。
+- `desks`：房间列表。每个 `desk` 包含 `positions[]`（座位状态：`0` 空位、`1` 已入座、`2` 已准备）、`gameType`、`roomCode`、`isPrivate`；掼蛋房间还包含 `guandanLevelRank` 和 `guandanLevelLabel`。
+- `gameDatas[deskId]`：房间当前的 `Game` 或 `GuandanGame` 状态机实例。
+- `botTimers[deskId]`：等待执行的 AI 操作 `setTimeout`。
 
-### Card state machines
+HTTP `/api` 中间件只允许 GET/HEAD 请求，并包含限流和 JSON 404 兜底。API 设计为只读；积分写入只会在服务端游戏结算时发生。Socket.IO 事件由 `proto` 处理，处理器修改房间和座位状态，并向房间或大厅广播 `*_CHANGE` 等事件。
 
-- `game.js` — Doudizhu. `Game()` holds `status` (0 not started / 1 bidding / 2 playing / 3 over / 4 re-deal / 5 error), `contextCards`, `contextScore`, `lastCardInfo`, `userScore`, `sumCount` (for 春天/反春 detection). Card values run 3–17 (16=small joker, 17=big joker). Uses `core-validator.js`.
-- `guandan-game.js` — Guandan. 108 cards (2 decks), each card carries a `deck` field (0/1) to distinguish duplicates. `SEQUENCE_ORDER = [14,15,3,...,14]` (A, 2 low-wrap). `HEART_TYPE = 2` marks the level-suit “逢人配” wild card; wild logic is core to `validate`. Seats 0/2 are one team, 1/3 the other. Level promotion via `advanceRank` in the server.
+客户端断开连接或返回大厅后，`cleanupRoomIfEmpty` 会清理没有真人玩家的房间：移除 AI、清除计时器、调用 `game.init()` 重置游戏，并删除房间。
 
-Both expose the same interface the server calls: `init()`, `start().getCards()`, `validate(posId, cards)` → `{status, key, type, len, bomb}`, `next(posId, cards)`, `getStatus()`, `getContextPosId()`, `getResult()`, etc.
+### 游戏状态机
 
-### AI bots
+- `game.js`：斗地主状态机。`Game()` 维护 `status`（`0` 未开始、`1` 叫分、`2` 游戏中、`3` 结束、`4` 需要重发、`5` 错误）、`contextCards`、`contextScore`、`lastCardInfo`、`userScore` 和用于春天/反春判定的 `sumCount`。牌值范围是 3–17，其中 16 为小王、17 为大王。校验逻辑使用 `core-validator.js`。
+- `guandan-game.js`：掼蛋状态机。使用 108 张牌，每张牌包含 `deck` 字段（0/1）以区分重复牌。`SEQUENCE_ORDER = [14,15,3,...,14]` 使 A 可低位连接；`HEART_TYPE = 2` 表示级牌花色中的“逢人配”，通配逻辑是 `validate` 的核心。座位 0/2 为一队，1/3 为另一队。级别晋升由服务端的 `advanceRank` 处理。
 
-Bots are server-side timers (`scheduleBotAction`) that act only when the current-turn position is a bot seat. Doudizhu bots use `shouldCallDoudizhuScore` (hand-power heuristic) + `AISuggest.suggest` from `static/js/ai-suggest.js`. Guandan bots use `GuandanSuggest.suggest` from `static/js/guandan-suggest.js` — **the same module the frontend “智囊” button uses**, so server bots and the suggestion feature share one rule engine. Bots auto-reprepare after a round (`rePrepareBots`).
+两个状态机都向服务端提供相同的调用接口：`init()`、`start().getCards()`、`validate(posId, cards)`（返回 `{status, key, type, len, bomb}`）、`next(posId, cards)`、`getStatus()`、`getContextPosId()`、`getResult()` 等。
 
-### Database (`db.js`)
+### AI 机器人
 
-Optional MySQL persistence of per-game scores. `db.init()` runs at startup (before `server.js` `init()`), auto-creates tables `<prefix>doudizhu_score` and `<prefix>guandan_score` if missing. Degrades to memory mode when `mysql2` is unavailable, `DB_USER`/`DB_NAME` unset, or `DB_DISABLE=1`. Only JWT-authenticated real players (with `uid`) get scored — guests, bots, spectators don't. `recordResultToDb` computes deltas at settlement (landlord pays 2× on Doudizhu).
+机器人通过服务端计时器 `scheduleBotAction` 执行动作，并且只在当前出牌座位是机器人时运行。斗地主机器人使用 `shouldCallDoudizhuScore` 手牌强度启发式算法，以及 `static/js/ai-suggest.js` 中的 `AISuggest.suggest`。掼蛋机器人使用 `static/js/guandan-suggest.js` 中的 `GuandanSuggest.suggest`；前端“智囊”按钮也使用同一模块，因此服务端机器人和前端建议功能共享一套规则引擎。每局结束后，`rePrepareBots` 会让机器人自动重新准备。
 
-### Frontend (`static/`)
+### 数据库（`db.js`）
 
-Single-page Vue 2 app in `index.html` (all templates inline, no compiled components). Screen state machine via `where` (0 login / 1 hall / 2 room). `parseUrl` reads `?auth=guest` to skip Discuz login. Key JS modules:
-- `js/ai-suggest.js` — Doudizhu letter suggestion (also used server-side).
-- `js/guandan-suggest.js` — Guandan letter/AI shared rule engine.
-- `js/parser.js` — Doudizhu card-type parsing (client-side validation preview).
-- `js/effects.js` — sound/effects; mute toggle.
-- `css/theme.css` — theme variables (国风 theme); `css/style.css` — layout/components.
-- `js/layer/` — vendored popup component; `jquery.min.js`, `vue.min.js` vendored (no npm/ESM).
+MySQL 积分持久化是可选功能。服务启动时先执行 `db.init()`，完成后才调用 `server.js` 的 `init()`；缺少积分表时会自动创建 `<prefix>doudizhu_score` 和 `<prefix>guandan_score`。未安装 `mysql2`、未设置 `DB_USER`/`DB_NAME` 或设置 `DB_DISABLE=1` 时，系统会降级为内存模式。只有具有 `uid` 的 JWT 登录真人玩家会记录积分；游客、机器人和观战者不计分。`recordResultToDb` 在结算时计算积分变化，斗地主地主按 2 倍计分。
 
-## Card display conventions
+### 前端（`static/`）
 
-`value` 3–14 = 3…A, 15 = 2, 16 = small joker, 17 = big joker. Face labels via `rankLabel`/`labelValue` (11=J, 12=Q, 13=K, 14=A, 15=2). Guandan dives deeper: `SEQUENCE_ORDER` treats A as both low and high (e.g. `A2345` and `10JQKA` are both valid sequences). When editing card rules, keep client `parser.js`/`ai-suggest.js` and server `game.js`/`guandan-game.js` in agreement — they are hand-synced, not generated.
+前端是定义在 `index.html` 中的单页 Vue 2 应用，所有模板均为内联形式，没有编译组件。页面通过 `where` 管理状态：`0` 登录、`1` 大厅、`2` 房间。当前提交的界面默认直接使用访客登录（`authMode: 'guest'`、`guestMode: true`），同一页面中仍保留 Discuz 登录分支。SSO Token 通过 `#token=<JWT>` 传入，随后保存到 `localStorage`、从可见 URL 中移除，并作为 Socket.IO 的 `auth.token` 发送。
 
-## Socket protocol
+主要前端模块：
 
-Snapshot of the event names (client→server and server→client) is documented in `README.md` under “常用 Socket 事件”. The server broadcasts `REFRESH_LIST` to the lobby, `*_CHANGE` events to the room, and `GAME_OVER` + `MY_SCORE` at settlement. JWT, if present, is verified in Socket.IO middleware during handshake (`socket.handshake.auth.token`); a failed token sets `socket.tokenError` and triggers an immediate `LOGIN_FAIL`. Same-name duplicate connections are force-disconnected to avoid username deadlock.
+- `js/ai-suggest.js`：斗地主出牌建议，服务端也会使用。
+- `js/guandan-suggest.js`：掼蛋出牌建议和 AI 共用规则引擎。
+- `js/parser.js`：斗地主牌型解析，用于客户端校验预览。
+- `js/effects.js`：音效和特效，包括静音开关。
+- `css/theme.css`：国风主题变量。
+- `css/style.css`：主要布局和组件样式。
+- `js/layer/`：项目内置弹窗组件。
+- `jquery.min.js`、`vue.min.js`：项目内置依赖，不使用 npm/ESM 打包。
 
-## Deployment notes
+## 扑克牌显示约定
 
-- Use HTTPS when Discuz SSO is enabled; set a strong random `JWT_SECRET` in production.
-- Socket.IO `pingInterval`/`pingTimeout` are tuned for Cloudflare Orange-Cloud proxying (avoid 100s idle cut).
-- `.codex-ui-audit/` holds UI audit screenshots/notes — diagnostic output, not part of the runtime.
+`value` 为 3–14 时对应 3 到 A，15 对应 2，16 对应小王，17 对应大王。牌面文字通过 `rankLabel`/`labelValue` 转换：11=J、12=Q、13=K、14=A、15=2。掼蛋的顺序更特殊：`SEQUENCE_ORDER` 允许 A 同时作为低位和高位，因此 `A2345` 和 `10JQKA` 都是合法顺子。
+
+修改牌型规则时，必须保持客户端的 `parser.js`/`ai-suggest.js` 与服务端的 `game.js`/`guandan-game.js` 一致；这些实现是手动同步的，不是自动生成的。
+
+## Socket 协议
+
+事件名称快照记录在 `README.md` 的“常用 Socket 事件”章节。服务端向大厅广播 `REFRESH_LIST`，向房间广播 `*_CHANGE` 事件，并在结算时发送 `GAME_OVER` 和 `MY_SCORE`。
+
+如果存在 JWT，Socket.IO 中间件会在握手阶段校验 `socket.handshake.auth.token`。Token 校验失败时会设置 `socket.tokenError`，并立即发送 `LOGIN_FAIL`。同名用户重复连接时，旧连接会被强制断开，避免用户名被锁死。
+
+## 部署注意事项
+
+- 启用 Discuz SSO 时使用 HTTPS，并在生产环境设置强随机 `JWT_SECRET`。
+- Socket.IO 的 `pingInterval`/`pingTimeout` 已针对 Cloudflare 橙云代理调整，以避免约 100 秒的空闲连接中断。
+- `.codex-ui-audit/` 保存 UI 审计截图和记录，只是诊断输出，不属于运行时文件。

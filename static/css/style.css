@@ -807,27 +807,37 @@ button.btn-ghost {
 }
 .btn-exit-room:hover { background: var(--glass-bg-strong); box-shadow: 0 0 0 1px var(--gold-400); }
 
-/* 查看上一轮按钮 */
+/* 查看上一轮按钮：靠右弱化，避免遮挡手牌和主操作区 */
 .btn-last-round {
   position: fixed;
-  bottom: 240px;
-  left: 50%;
-  transform: translateX(-50%);
+  right: 18px;
+  bottom: 248px;
   z-index: 70;
-  padding: 8px 22px;
+  padding: 6px 11px;
   font-family: var(--font-serif);
-  font-size: 15px;
-  letter-spacing: 0.1em;
-  color: var(--text);
-  background: rgba(0,0,0,0.55);
-  border: 1px solid var(--gold-line);
-  border-radius: 8px;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--text-soft);
+  background: rgba(6,20,18,0.38);
+  border: 1px solid rgba(212,168,90,0.24);
+  border-radius: 6px;
+  opacity: 0.68;
   cursor: pointer;
-  transition: all .2s var(--ease-soft);
+  transition: color .2s var(--ease-soft), border-color .2s var(--ease-soft), background .2s var(--ease-soft), opacity .2s var(--ease-soft);
   backdrop-filter: blur(4px);
 }
-.btn-last-round:hover { color: var(--gold); border-color: var(--gold-soft); box-shadow: 0 0 16px rgba(208,168,92,0.4); }
-.btn-last-round.ctx-active { color: var(--gold); border-color: var(--gold); background: rgba(0,0,0,0.7); }
+.btn-last-round:hover {
+  color: var(--gold-300);
+  border-color: var(--gold-line);
+  background: rgba(6,20,18,0.62);
+  opacity: 1;
+}
+.btn-last-round.ctx-active {
+  color: var(--gold-300);
+  border-color: var(--gold-line);
+  background: rgba(6,20,18,0.66);
+  opacity: 0.9;
+}
 
 /* 查看上一轮：回放片段的半透明样式 */
 .ctx-last-round .card { opacity: 0.85; }
@@ -2432,6 +2442,12 @@ button.btn-ghost {
     bottom: 10px;
     max-width: calc(100vw - 40px);
   }
+  .btn-last-round {
+    right: 10px;
+    bottom: 122px;
+    padding: 5px 9px;
+    font-size: 11px;
+  }
   .btn-group {
     bottom: 74px;
     max-width: calc(100vw - 28px);
@@ -2567,9 +2583,12 @@ button.btn-ghost {
     padding: 8px;
   }
   .btn-last-round {
-    bottom: 240px;
-    left: 50%;
-    transform: translateX(-50%);
+    right: 10px;
+    bottom: 210px;
+    left: auto;
+    transform: none;
+    padding: 5px 9px;
+    font-size: 11px;
   }
   .card-ctx-self { top: auto; bottom: 200px; }
   .card-ctx-left {
@@ -2755,12 +2774,18 @@ button.btn-ghost {
   /* 显示房号浮标 */
   .room-code-float { display: block; }
 
-  /* 竖屏禁音按钮 */
+  .btn-last-round {
+    right: 8px;
+    bottom: 202px;
+  }
+
+  /* 竖屏音效开关 */
   .btn-mute-float {
     display: flex;
     position: fixed;
-    top: 6px;
-    right: 6px;
+    top: auto;
+    right: 8px;
+    bottom: 242px;
     z-index: 1100;
     width: 36px;
     height: 36px;
@@ -2822,44 +2847,30 @@ button.btn-ghost {
     transform-origin: top right;
   }
 
-  /* 出牌区整体上移，紧凑排列在顶部区域下方 */
-  .card-ctx-left {
+  /* 对手出牌与自己的出牌保持同一视觉尺寸；左右各占半屏，避免向中央重叠。 */
+  .card-ctx-left,
+  .room-guandan .card-ctx-left {
     top: 90px;
     left: 8px;
+    right: auto;
   }
-  .card-ctx-right {
+  .card-ctx-right,
+  .room-guandan .card-ctx-right {
     top: 90px;
     right: 8px;
+    left: auto;
   }
-  .card-ctx-top {
-    top: 90px;
+  .card-ctx-top,
+  .room-guandan .card-ctx-top {
+    top: 164px;
     left: 50%;
     transform: translateX(-50%);
   }
   .card-ctx-left .card,
-  .card-ctx-right .card {
-    transform: scale(0.72);
-    transform-origin: top left;
-  }
-  .card-ctx-top .card {
-    transform: scale(0.82);
-    transform-origin: top left;
-  }
-  .room-guandan .card-ctx-left {
-    top: 90px;
-    left: 8px;
-  }
-  .room-guandan .card-ctx-right {
-    top: 90px;
-    right: 8px;
-  }
-  .room-guandan .card-ctx-top {
-    top: 90px;
-    left: 50%;
-    transform: translateX(-50%);
-  }
+  .card-ctx-right .card,
+  .card-ctx-top .card,
   .room-guandan .card-ctx-top .card {
-    transform: scale(0.72);
+    transform: scale(0.88);
     transform-origin: top left;
   }
 
@@ -3036,9 +3047,12 @@ button.btn-ghost {
 }
 .btn-mute:hover { color: var(--gold); border-color: var(--gold-soft); box-shadow: 0 0 12px rgba(208,168,92,0.3); }
 
-/* 竖屏禁音浮标（桌面端隐藏） */
+/* 竖屏音效浮标（桌面端隐藏） */
 .btn-mute-float { display: none; }
 .btn-mute-float:hover { background: rgba(0,0,0,0.65); }
+@media (orientation: portrait) and (max-width: 768px) {
+  .btn-mute-float { display: flex; }
+}
 
 /* 观战按钮 */
 .desk-spectate {
