@@ -771,60 +771,62 @@ button.btn-ghost {
 }
 .card-counter-panel {
   position: absolute;
-  top: calc(100% + 6px);
+  top: calc(100% + 3px);
   left: 50%;
   z-index: 6;
   width: min(680px, calc(100vw - 16px));
-  padding: 5px 8px 6px;
+  padding: 3px 24px 3px 6px;
   color: var(--text);
   background: rgba(6, 20, 18, 0.94);
   border: 1px solid var(--glass-border-gold);
-  border-radius: 6px;
+  border-radius: 5px;
   box-shadow: var(--shadow-md);
   -webkit-backdrop-filter: blur(14px);
           backdrop-filter: blur(14px);
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 10px;
+  line-height: 16px;
   transform: translateX(-50%);
 }
-.card-counter-head {
-  display: grid;
-  grid-template-columns: 1fr auto 18px;
-  align-items: center;
-  gap: 6px;
-  margin-bottom: 4px;
-  color: var(--gold-300);
-}
-.card-counter-head strong { font-family: var(--font-serif); font-size: 11px; letter-spacing: 0.1em; }
-.card-counter-head span { color: var(--text-soft); font-size: 10px; white-space: nowrap; }
-.card-counter-head button {
-  width: 18px; height: 18px; padding: 0;
-  color: var(--text-soft); background: transparent; border: 0; cursor: pointer;
-  font-size: 16px; line-height: 1;
-}
-.card-counter-items {
-  display: grid;
-  grid-template-columns: repeat(15, minmax(0, 1fr));
-  gap: 2px;
-}
-.card-counter-item {
-  display: grid;
-  grid-template-columns: auto auto;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  min-width: 0;
-  min-height: 18px;
+.card-counter-close {
+  position: absolute;
+  top: 50%;
+  right: 3px;
+  width: 18px;
+  height: 18px;
+  min-height: 0;
+  padding: 0;
   color: var(--text-soft);
-  text-align: center;
+  background: transparent;
+  border: 0;
+  font-size: 16px;
+  line-height: 18px;
+  transform: translateY(-50%);
 }
-.card-counter-item b { color: var(--text); font-weight: 600; }
-.card-counter-item em { color: var(--gold-300); font-style: normal; }
-.card-counter-item .empty,
-.card-counter-item.empty,
-.card-counter-item.empty em { color: rgba(255,255,255,0.2); }
-.card-counter-panel .is-red { color: #ef9b91; }
-.card-counter-joker b { font-size: 9px; }
+.card-counter-row {
+  display: grid;
+  grid-template-columns: 38px repeat(13, minmax(18px, 1fr)) repeat(2, minmax(28px, 1.35fr));
+  align-items: center;
+  min-width: 0;
+  text-align: center;
+  white-space: nowrap;
+}
+.card-counter-row + .card-counter-row {
+  border-top: 1px solid rgba(212,168,90,0.12);
+}
+.card-counter-row strong {
+  color: var(--gold-300);
+  font-family: var(--font-serif);
+  font-size: 10px;
+  font-weight: 600;
+}
+.card-counter-row span {
+  min-width: 0;
+  color: var(--text);
+}
+.card-counter-counts span { color: var(--gold-300); }
+.card-counter-row span.empty { color: rgba(255,255,255,0.22); }
+.card-counter-joker { font-size: 9px; }
 .btn-card-counter-float { display: none; }
 .rules-panel {
   padding: 18px 20px;
@@ -1083,7 +1085,7 @@ button.btn-ghost {
   overflow-y: visible;
 }
 .card-group-self.card-group-counter-open {
-  bottom: calc(var(--self-hand-bottom) + 54px);
+  bottom: var(--self-hand-bottom);
 }
 .card-group-self .card { animation: card-deal 480ms var(--ease-back) both; }
 .card-group-self .card:nth-child(odd)  { animation-delay: calc(var(--i, 0) * 30ms); }
@@ -1135,7 +1137,7 @@ button.btn-ghost {
 }
 .card-ctx-self {
   top: auto;
-  bottom: 214px;
+  bottom: 300px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 78;
@@ -2177,7 +2179,7 @@ button.btn-ghost {
     transform: translateX(-50%) scale(0.94);
   }
   .card-ctx .card { transform: scale(0.88); }
-  .card-ctx-self { bottom: 244px; }
+  .card-ctx-self { bottom: 286px; }
   .card-ctx-left {
     top: calc(50vh - 68px);
     left: calc(var(--table-left-safe) - 6px);
@@ -2284,7 +2286,7 @@ button.btn-ghost {
     top: calc(50vh - 60px);
     right: calc(50% - 250px);
   }
-  .card-ctx-self    { top: auto; bottom: 200px; }
+  .card-ctx-self    { top: auto; bottom: 242px; }
   .player-left      { left: calc(var(--table-left-safe) - 118px); top: calc(50vh - 58px); }
   .player-self-ctx  { left: clamp(16px, calc(50vw - 360px), 170px); right: auto; top: auto; bottom: calc(44px + var(--card-h) + 10px); }
   .player-right     { right: calc(var(--table-right-safe) - 118px); top: calc(50vh - 58px); }
@@ -2438,8 +2440,12 @@ button.btn-ghost {
   .card-counter-panel {
     width: min(680px, calc(100vw - 16px));
   }
-  .card-counter-items { gap: 1px; }
-  .card-counter-item { font-size: 10px; }
+  .card-counter-row {
+    grid-template-columns: 34px repeat(13, minmax(16px, 1fr)) repeat(2, minmax(25px, 1.35fr));
+  }
+  .card-counter-row strong,
+  .card-counter-row span { font-size: 9px; }
+  .card-counter-joker { font-size: 8px !important; }
   .card-group-left  { left: var(--table-left-safe); top: calc(50vh - 175px); }
   .card-group-right { right: var(--table-right-safe); top: calc(50vh - 175px); }
   .card-group-top.card-group-up { top: var(--table-top-safe); }
@@ -2456,7 +2462,7 @@ button.btn-ghost {
     right: calc(50% - 220px);
     top: calc(50vh - 60px);
   }
-  .card-ctx-self    { top: auto; bottom: 200px; }
+  .card-ctx-self    { top: auto; bottom: 232px; }
   .player-left,
   .player-right     { display: none; }
   .player-top       { top: calc(var(--table-top-safe) + var(--card-h) + 16px); }
@@ -2624,13 +2630,16 @@ button.btn-ghost {
   .btn-card-counter-float { display: none; }
   .card-counter-panel {
     width: min(520px, calc(100vw - 16px));
-    padding: 4px 6px 5px;
-    font-size: 10px;
+    padding: 3px 22px 3px 5px;
+    font-size: 9px;
+    line-height: 14px;
   }
-  .card-counter-head { margin-bottom: 3px; }
-  .card-counter-items { gap: 1px; }
-  .card-counter-item { min-height: 16px; font-size: 9px; }
-  .card-counter-joker b { font-size: 8px; }
+  .card-counter-row {
+    grid-template-columns: 32px repeat(13, minmax(14px, 1fr)) repeat(2, minmax(23px, 1.35fr));
+  }
+  .card-counter-row strong,
+  .card-counter-row span { font-size: 8px; }
+  .card-counter-joker { font-size: 7px !important; }
   .card-group-top {
     top: var(--table-top-safe);
   }
@@ -2676,7 +2685,7 @@ button.btn-ghost {
     font-size: 15px;
   }
   .card-ctx-self {
-    bottom: 100px;
+    bottom: 140px;
   }
   .card-ctx-left {
     left: calc(50% - 222px);
@@ -2799,7 +2808,7 @@ button.btn-ghost {
     padding: 5px 9px;
     font-size: 11px;
   }
-  .card-ctx-self { top: auto; bottom: 200px; }
+  .card-ctx-self { top: auto; bottom: 240px; }
   .card-ctx-left {
     left: 40px;
     top: calc(50vh - 60px);
@@ -3180,10 +3189,10 @@ button.btn-ghost {
     transform-origin: top left;
   }
 
-  /* 自己出牌区上移 */
+  /* 自己出牌区放到操作按钮上方，避免提示和出牌按钮盖住牌面。 */
   .card-ctx-self {
     top: auto;
-    bottom: 168px;
+    bottom: 190px;
   }
   /* 自己出牌区内的牌正常大小 */
   .card-ctx-self .card {
@@ -3202,7 +3211,7 @@ button.btn-ghost {
 
   /* 自己手牌底部间距 */
   .card-group-self {
-    --self-hand-bottom: 34px;
+    --self-hand-bottom: 46px;
     bottom: var(--self-hand-bottom);
     left: 50% !important;
     right: auto;
@@ -3210,7 +3219,7 @@ button.btn-ghost {
     max-width: calc(100vw - 8px);
   }
   .room-guandan .card-group-self {
-    bottom: 42px;
+    bottom: 52px;
   }
 
   /* 掼蛋信息板移到顶部居中 */

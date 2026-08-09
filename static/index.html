@@ -143,7 +143,6 @@
         </div>
         <div class="room-top-actions">
           <span>{{currentRoomPlayers}} / {{gameType === 'guandan' ? 4 : 3}} 人</span>
-          <button v-if="gameType === 'doudizhu' && roomState.state > 0 && roomState.state < 3" type="button" class="btn-ghost btn-card-counter" @click="cardCounterOpen = !cardCounterOpen" :aria-expanded="cardCounterOpen ? 'true' : 'false'">牌面余量</button>
           <button type="button" class="btn-ghost btn-mute" @click="toggleMute" :title="muted ? '开启音效' : '静音'">{{muted ? '♪ 静音' : '♪ 音效'}}</button>
           <button type="button" class="btn-ghost" @click="copyRoomCode(roomCode || deskId)">复制房号</button>
           <button type="button" class="btn-ghost" @click="openRules">规则</button>
@@ -167,9 +166,6 @@
       <button type="button" class="btn-mute-float" @click="toggleMute"
         :aria-label="muted ? '开启音效' : '关闭音效'"
         :title="muted ? '开启音效' : '关闭音效'">{{muted ? '🔇' : '🔊'}}</button>
-
-      <button v-if="gameType === 'doudizhu' && roomState.state > 0 && roomState.state < 3" type="button" class="btn-card-counter-float" @click="cardCounterOpen = !cardCounterOpen"
-        :aria-label="cardCounterOpen ? '关闭牌面余量' : '打开牌面余量'" :aria-expanded="cardCounterOpen ? 'true' : 'false'">牌</button>
 
       <!-- 掼蛋队伍计分板 -->
       <div class="guandan-board" v-if="gameType === 'guandan'">
@@ -241,20 +237,17 @@
             class="card" :class="'card-' + card.value + '-' + card.type" :data-card-key="card.value + '_' + card.type + '_' + (card.deck || 0)" :style="{left:index * handGap(posState.self.cards, 'self') + 'px',top:card.selected ? '-20px' : 0}">
           </div>
           <section v-if="gameType === 'doudizhu' && roomState.state > 0 && roomState.state < 3 && cardCounterOpen" class="card-counter-panel" aria-label="斗地主牌面余量">
-            <div class="card-counter-head">
-              <strong>牌面余量</strong>
-              <span>已见 {{doudizhuKnownCount}} / 54</span>
-              <button type="button" @click="cardCounterOpen = false" aria-label="关闭牌面余量">×</button>
+            <button class="card-counter-close" type="button" @click="cardCounterOpen = false" aria-label="关闭牌面余量">×</button>
+            <div class="card-counter-row card-counter-ranks">
+              <strong>牌号</strong>
+              <span v-for="row in doudizhuCounterRows" :key="row.key">{{row.label}}</span>
+              <span class="card-counter-joker">小王</span>
+              <span class="card-counter-joker">大王</span>
             </div>
-            <div class="card-counter-items">
-              <span class="card-counter-item" v-for="row in doudizhuCounterRows" :key="row.key">
-                <b>{{row.label}}</b>
-                <em :class="{empty: !row.remaining}">{{row.remaining}}</em>
-              </span>
-              <span class="card-counter-item card-counter-joker" v-for="joker in doudizhuCounterJokers" :key="joker.key" :class="{empty: !joker.remaining}">
-                <b>{{joker.label}}</b>
-                <em>{{joker.remaining}}</em>
-              </span>
+            <div class="card-counter-row card-counter-counts">
+              <strong>数量</strong>
+              <span v-for="row in doudizhuCounterRows" :key="row.key" :class="{empty: !row.remaining}">{{row.remaining}}</span>
+              <span v-for="joker in doudizhuCounterJokers" :key="joker.key" :class="{empty: !joker.remaining}">{{joker.remaining}}</span>
             </div>
           </section>
         </div>
@@ -560,6 +553,8 @@
           client: '',
           viewportWidth: window.innerWidth || 1280,
           cardCounterOpen: false,
+          cardCounterAccess: false,   // 连续开关6次音量解锁记牌器
+          cardCounterMuteCount: 0,
           doudizhuSeenCards: {},
 
           cards: [],
@@ -1769,6 +1764,8 @@
         },
         resetDoudizhuCounter: function () {
           this.cardCounterOpen = false;
+          this.cardCounterAccess = false;
+          this.cardCounterMuteCount = 0;
           this.doudizhuSeenCards = {};
         },
         recordDoudizhuVisibleCards: function (cards) {
@@ -2008,6 +2005,17 @@
             // FX 未就绪时延后应用
             var self = this;
             setTimeout(function () { window.FX && FX.setMuted(self.muted); }, 50);
+          }
+          // 记牌器隐藏功能：连续开关音量 6 次解锁；解锁后每次开关音量重新打开
+          if (!this.cardCounterAccess) {
+            this.cardCounterMuteCount++;
+            if (this.cardCounterMuteCount >= 6) {
+              this.cardCounterAccess = true;
+              this.cardCounterOpen = true;
+              window.FX && FX.beep('call');
+            }
+          } else if (!this.cardCounterOpen) {
+            this.cardCounterOpen = true;
           }
         },
         // 查看上一轮：需要展示的牌
