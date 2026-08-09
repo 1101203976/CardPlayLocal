@@ -131,7 +131,7 @@
       </div>
     </div>
     <!-- 房间 -->
-    <div class="full-screen room" v-if="where === 2" :class="{'room-spec': isSpec, 'room-guandan': gameType === 'guandan', 'room-playing': roomState.state > 0 && roomState.state < 3, 'room-waiting': roomState.state === 0 || roomState.state === 3}">
+    <div class="full-screen room" v-if="where === 2" :class="{'room-spec': isSpec, 'room-guandan': gameType === 'guandan', 'room-playing': roomState.state > 0 && roomState.state < 3, 'room-waiting': roomState.state === 0 || roomState.state === 3, 'room-game-over': roomState.state === 3}">
       <button class="btn-exit-room" @click="exitRoom">{{isSpec ? '退出观战' : '返回大厅'}}</button>
       <span v-if="myUser && myUser.username" class="user-badge user-badge-room" :title="'已用 Discuz 账号登录 (uid=' + myUser.uid + ')'">{{myUser.username}}</span>
       <div v-if="isSpec" class="spec-badge">观 战 模 式</div>
@@ -143,6 +143,7 @@
         </div>
         <div class="room-top-actions">
           <span>{{currentRoomPlayers}} / {{gameType === 'guandan' ? 4 : 3}} 人</span>
+          <button v-if="gameType === 'doudizhu' && roomState.state > 0 && roomState.state < 3" type="button" class="btn-ghost btn-card-counter" @click="cardCounterOpen = !cardCounterOpen" :aria-expanded="cardCounterOpen ? 'true' : 'false'">牌面余量</button>
           <button type="button" class="btn-ghost btn-mute" @click="toggleMute" :title="muted ? '开启音效' : '静音'">{{muted ? '♪ 静音' : '♪ 音效'}}</button>
           <button type="button" class="btn-ghost" @click="copyRoomCode(roomCode || deskId)">复制房号</button>
           <button type="button" class="btn-ghost" @click="openRules">规则</button>
@@ -166,6 +167,9 @@
       <button type="button" class="btn-mute-float" @click="toggleMute"
         :aria-label="muted ? '开启音效' : '关闭音效'"
         :title="muted ? '开启音效' : '关闭音效'">{{muted ? '🔇' : '🔊'}}</button>
+
+      <button v-if="gameType === 'doudizhu' && roomState.state > 0 && roomState.state < 3" type="button" class="btn-card-counter-float" @click="cardCounterOpen = !cardCounterOpen"
+        :aria-label="cardCounterOpen ? '关闭牌面余量' : '打开牌面余量'" :aria-expanded="cardCounterOpen ? 'true' : 'false'">牌</button>
 
       <!-- 掼蛋队伍计分板 -->
       <div class="guandan-board" v-if="gameType === 'guandan'">
@@ -227,7 +231,7 @@
       <div class="card-groups" v-if="roomState.state">
 
         <!-- 自己的牌列表 -->
-        <div class="card-group card-group-self" :style="handGroupStyle(posState.self.cards, 'self')" v-if="!isSpec && !(roomState.state === 3 && posState.self.state === 2)">
+        <div class="card-group card-group-self" :class="{'card-group-counter-open': gameType === 'doudizhu' && roomState.state > 0 && roomState.state < 3 && cardCounterOpen}" :style="handGroupStyle(posState.self.cards, 'self')" v-if="!isSpec && !(roomState.state === 3 && posState.self.state === 2)">
           <div @dragstart.prevent
             @mousedown.prevent="dragSelectStart(card, $event)"
             @mouseenter="dragSelectOver(card)"
@@ -236,6 +240,23 @@
             v-for="(card,index) in posState.self.cards"
             class="card" :class="'card-' + card.value + '-' + card.type" :data-card-key="card.value + '_' + card.type + '_' + (card.deck || 0)" :style="{left:index * handGap(posState.self.cards, 'self') + 'px',top:card.selected ? '-20px' : 0}">
           </div>
+          <section v-if="gameType === 'doudizhu' && roomState.state > 0 && roomState.state < 3 && cardCounterOpen" class="card-counter-panel" aria-label="斗地主牌面余量">
+            <div class="card-counter-head">
+              <strong>牌面余量</strong>
+              <span>已见 {{doudizhuKnownCount}} / 54</span>
+              <button type="button" @click="cardCounterOpen = false" aria-label="关闭牌面余量">×</button>
+            </div>
+            <div class="card-counter-items">
+              <span class="card-counter-item" v-for="row in doudizhuCounterRows" :key="row.key">
+                <b>{{row.label}}</b>
+                <em :class="{empty: !row.remaining}">{{row.remaining}}</em>
+              </span>
+              <span class="card-counter-item card-counter-joker" v-for="joker in doudizhuCounterJokers" :key="joker.key" :class="{empty: !joker.remaining}">
+                <b>{{joker.label}}</b>
+                <em>{{joker.remaining}}</em>
+              </span>
+            </div>
+          </section>
         </div>
         <!-- 左家的牌列表 -->
         <div class="card-group card-group-left" :style="handGroupStyle(posState.left.cards, 'side')">
@@ -282,8 +303,8 @@
       <!-- 出牌区域 -->
       <div class="screen-center">
         <!-- 左家的出牌区域 -->
-        <div class="card-ctx card-ctx-left" :class="{'ctx-last-round': showLastRound}" v-if="(roomState.state === 2 && (ctxDisplayVisible('left'))) || (roomState.state === 1 && posState.left.callScore > -1)" :style="handGroupStyle(ctxDisplayCards('left'), 'ctxSide')">
-          <template v-if="roomState.state === 2">
+        <div class="card-ctx card-ctx-left" :class="{'ctx-last-round': showLastRound}" v-if="((roomState.state === 2 || roomState.state === 3) && (ctxDisplayVisible('left'))) || (roomState.state === 1 && posState.left.callScore > -1)" :style="handGroupStyle(ctxDisplayCards('left'), 'ctxSide')">
+          <template v-if="roomState.state === 2 || roomState.state === 3">
             <div v-if="!ctxDisplayPass('left')" @dragStart="dragStart($event)" v-for="(card,index) in ctxDisplayCards('left')"
               class="card" :class="'card-' + card.value + '-' + card.type" :style="{left:index * handGap(ctxDisplayCards('left'), 'ctxSide') + 'px'}">
             </div>
@@ -296,8 +317,8 @@
 
         </div>
         <!-- 自己的出牌区域 -->
-        <div class="card-ctx card-ctx-self" :class="{'ctx-last-round': showLastRound}" v-if="(roomState.state === 2 && (ctxDisplayVisible('self'))) || (roomState.state === 1 && posState.self.callScore > -1)" :style="handGroupStyle(ctxDisplayCards('self'), 'ctxSelf')">
-          <template v-if="roomState.state === 2">
+        <div class="card-ctx card-ctx-self" :class="{'ctx-last-round': showLastRound}" v-if="((roomState.state === 2 || roomState.state === 3) && (ctxDisplayVisible('self'))) || (roomState.state === 1 && posState.self.callScore > -1)" :style="handGroupStyle(ctxDisplayCards('self'), 'ctxSelf')">
+          <template v-if="roomState.state === 2 || roomState.state === 3">
             <div v-if="!ctxDisplayPass('self')" @dragStart="dragStart($event)" v-for="(card,index) in ctxDisplayCards('self')"
               class="card" :class="'card-' + card.value + '-' + card.type" :style="{left:index * handGap(ctxDisplayCards('self'), 'ctxSelf') + 'px'}">
             </div>
@@ -312,8 +333,8 @@
 
         </div>
         <!-- 右家的出牌区域 -->
-        <div class="card-ctx card-ctx-right" :class="{'ctx-last-round': showLastRound}" v-if="(roomState.state === 2 && (ctxDisplayVisible('right'))) || (roomState.state === 1 && posState.right.callScore > -1)" :style="handGroupStyle(ctxDisplayCards('right'), 'ctxSide')">
-          <template v-if="roomState.state === 2">
+        <div class="card-ctx card-ctx-right" :class="{'ctx-last-round': showLastRound}" v-if="((roomState.state === 2 || roomState.state === 3) && (ctxDisplayVisible('right'))) || (roomState.state === 1 && posState.right.callScore > -1)" :style="handGroupStyle(ctxDisplayCards('right'), 'ctxSide')">
+          <template v-if="roomState.state === 2 || roomState.state === 3">
             <div v-if="!ctxDisplayPass('right')" @dragStart="dragStart($event)" v-for="(card,index) in ctxDisplayCards('right')"
               class="card" :class="'card-' + card.value + '-' + card.type" :style="{left:index * handGap(ctxDisplayCards('right'), 'ctxSide') + 'px'}">
             </div>
@@ -326,8 +347,8 @@
 
         </div>
         <!-- 上家的出牌区域（掼蛋） -->
-        <div class="card-ctx card-ctx-top" :class="{'ctx-last-round': showLastRound}" v-if="gameType === 'guandan' && roomState.state === 2 && (ctxDisplayVisible('top'))" :style="handGroupStyle(ctxDisplayCards('top'), 'ctxTop')">
-          <template v-if="roomState.state === 2">
+        <div class="card-ctx card-ctx-top" :class="{'ctx-last-round': showLastRound}" v-if="gameType === 'guandan' && (roomState.state === 2 || roomState.state === 3) && (ctxDisplayVisible('top'))" :style="handGroupStyle(ctxDisplayCards('top'), 'ctxTop')">
+          <template v-if="roomState.state === 2 || roomState.state === 3">
             <div v-if="!ctxDisplayPass('top')" @dragStart="dragStart($event)" v-for="(card,index) in ctxDisplayCards('top')"
               class="card" :class="'card-' + card.value + '-' + card.type" :style="{left:index * handGap(ctxDisplayCards('top'), 'ctxTop') + 'px'}">
             </div>
@@ -538,6 +559,8 @@
           desks: [],
           client: '',
           viewportWidth: window.innerWidth || 1280,
+          cardCounterOpen: false,
+          doudizhuSeenCards: {},
 
           cards: [],
 
@@ -746,6 +769,7 @@
             this.gameType = data.gameType || 'doudizhu';
             this.guandanLevelLabel = data.guandanLevelLabel || '2';
             this.guandanLevelRank = data.guandanLevelRank || this.rankFromLabel(this.guandanLevelLabel);
+            this.resetDoudizhuCounter();
             this.isSpec = true;
             this.posId = 'spec';
             // 初始化座位状态名字
@@ -822,7 +846,9 @@
               this.roomState.ctxPos = this.getDirectionByPosId(data.ctxPos);
               this.roomState.ctxCard = { len: 0, key: '', type: '', ctxPos: '' };
             }
+            this.resetDoudizhuCounter();
             this.initCards(data.cards);
+            this.seedDoudizhuCounterFromDeal(data.cards);
             this.posState.left.callScore = -1;
             this.posState.right.callScore = -1;
             this.posState.top.callScore = -1;
@@ -862,11 +888,19 @@
           //显示底牌事件
           this.client.on('SHOW_TOP_CARD', function (data) {
             this.roomState.state = 2;
+            this.recordDoudizhuVisibleCards(data.topCards);
             var direct = this.getDirectionByPosId(data.dizhuPosId);
             if (direct == 'self') {
-              data.topCards.forEach(function (card) {
+              var autoSelectedTopCards = data.topCards.filter(function (card) {
+                if (card.selected) return false;
                 card.selected = true;
-              })
+                return true;
+              });
+              setTimeout(function () {
+                autoSelectedTopCards.forEach(function (card) {
+                  card.selected = false;
+                });
+              }, 3000);
             }
             this.posState[direct].cards = this.posState[direct].cards.concat(data.topCards).sort(function (a, b) {
               return b.value - a.value;
@@ -915,6 +949,7 @@
               this.posState.self.isPass = false;
             }
             if (!data.isPass) {
+              this.recordDoudizhuVisibleCards(data.ctxData.cards);
               this.roomState.ctxCard.len = data.ctxData.len;
               this.roomState.ctxCard.key = data.ctxData.key;
               this.roomState.ctxCard.type = data.ctxData.type;
@@ -981,8 +1016,6 @@
               this.roomState.state = 3;
               ['left', 'right', 'top', 'self'].forEach(function (direct) {
                 this.posState[direct].state = this.posState[direct].state ? 1 : 0;
-                this.posState[direct].isPass = false;
-                this.posState[direct].ctxCards = [];
               }.bind(this));
               if (window.FX) FX.beep(iWonGd || this.isSpec ? 'win' : 'lose');
               return;
@@ -1051,15 +1084,12 @@
 
             this.posState.left.state = 1;
             this.posState.left.callScore = -1;
-            this.posState.left.isPass = false;
 
             this.posState.right.state = 1;
             this.posState.right.callScore = -1;
-            this.posState.right.isPass = false;
 
             this.posState.self.state = 1;
             this.posState.self.callScore = -1;
-            this.posState.self.isPass = false;
 
             // —— 胜负音效 ——
             if (window.FX) FX.beep(iWon ? 'win' : (this.isSpec ? 'win' : 'lose'));
@@ -1524,6 +1554,7 @@
           if (w <= 900 && h <= 480 && w > h) return 46;
           if (w <= 640) return 54;
           if (w <= 1024) return 70;
+          if (w >= 1600 && h >= 850) return 104;
           return 90;
         },
         handMaxWidth: function (zone) {
@@ -1549,13 +1580,13 @@
             if (zone === 'ctxTop') return Math.max(150, Math.min(240, Math.floor(w * 0.32)));
             if (zone === 'kitty') return 130;
           }
-          if (zone === 'self') return Math.max(260, w - (w <= 640 ? 64 : (w <= 768 ? 16 : 172)));
-          if (zone === 'side') return Math.max(180, Math.min(w <= 768 ? 190 : (w <= 1024 ? 190 : 280), Math.floor(w * 0.24)));
-          if (zone === 'top') return Math.max(260, Math.min(w <= 1024 ? 420 : 620, w - 360));
-          if (zone === 'ctxSelf') return Math.max(220, Math.min(w <= 768 ? w - 32 : 460, Math.floor(w * 0.42)));
-          if (zone === 'ctxSide') return Math.max(180, Math.min(w <= 1024 ? 280 : 360, Math.floor(w * 0.28)));
-          if (zone === 'ctxTop') return Math.max(220, Math.min(w <= 1024 ? 340 : 460, Math.floor(w * 0.38)));
-          if (zone === 'kitty') return 220;
+          if (zone === 'self') return Math.max(260, w - (w <= 640 ? 64 : (w <= 768 ? 16 : (w >= 1600 && h >= 850 ? 260 : 172))));
+          if (zone === 'side') return Math.max(180, Math.min(w >= 1600 && h >= 850 ? 380 : (w <= 768 ? 190 : (w <= 1024 ? 190 : 280)), Math.floor(w * (w >= 1600 && h >= 850 ? 0.22 : 0.24))));
+          if (zone === 'top') return Math.max(260, Math.min(w >= 1600 && h >= 850 ? 760 : (w <= 1024 ? 420 : 620), w - (w >= 1600 && h >= 850 ? 520 : 360)));
+          if (zone === 'ctxSelf') return Math.max(220, Math.min(w >= 1600 && h >= 850 ? 560 : (w <= 768 ? w - 32 : 460), Math.floor(w * 0.42)));
+          if (zone === 'ctxSide') return Math.max(180, Math.min(w >= 1600 && h >= 850 ? 430 : (w <= 1024 ? 280 : 360), Math.floor(w * 0.28)));
+          if (zone === 'ctxTop') return Math.max(220, Math.min(w >= 1600 && h >= 850 ? 560 : (w <= 1024 ? 340 : 460), Math.floor(w * 0.38)));
+          if (zone === 'kitty') return w >= 1600 && h >= 850 ? 260 : 220;
           return Math.max(260, Math.floor(w * 0.5));
         },
         handRowCount: function (cards, zone) {
@@ -1672,6 +1703,7 @@
         },
         resetRoomStatus: function () {
           this.startTimer(false);//停止计时器
+          this.resetDoudizhuCounter();
           this.where = 1;
           this.posId = '';
           this.deskId = '';
@@ -1735,6 +1767,30 @@
           }
           return -1;
         },
+        resetDoudizhuCounter: function () {
+          this.cardCounterOpen = false;
+          this.doudizhuSeenCards = {};
+        },
+        recordDoudizhuVisibleCards: function (cards) {
+          if (this.gameType !== 'doudizhu' || !Array.isArray(cards)) return;
+          cards.forEach(function (card) {
+            if (!card) return;
+            var value = Number(card.value);
+            var type = Number(card.type);
+            var isNormalCard = value >= 3 && value <= 15 && type >= 0 && type <= 3;
+            var isJoker = (value === 16 || value === 17) && type === 0;
+            if (!isNormalCard && !isJoker) return;
+            this.$set(this.doudizhuSeenCards, value + '_' + type, true);
+          }.bind(this));
+        },
+        seedDoudizhuCounterFromDeal: function (groups) {
+          if (this.gameType !== 'doudizhu' || this.isSpec || !Array.isArray(groups)) return;
+          var myPosId = Number(this.posId);
+          var myGroup = groups.find(function (group) {
+            return Number(group.id) === myPosId;
+          });
+          if (myGroup) this.recordDoudizhuVisibleCards(myGroup.cards);
+        },
         removeCards: function (pos, cards) {
           cards.forEach(function (card) {
             var index = this.getCardIndex(pos, card);
@@ -1765,8 +1821,11 @@
         },
         //不出
         passCards: function () {
+          this.posState.self.cards.forEach(function (card) {
+            card.selected = false;
+          });
           this._suggestClicked = false;
-          this.client.emit('PLAY_CARD', [])
+          this.client.emit('PLAY_CARD', []);
         },
         autoPlayCards: function () {
           if (this.roomState.ctxPos === 'self') {
@@ -1863,6 +1922,7 @@
         },
         applySpectateSnapshot: function (snap) {
           if (!snap) return;
+          this.resetDoudizhuCounter();
           if (snap.gameType) this.gameType = snap.gameType;
           if (snap.levelLabel) this.guandanLevelLabel = snap.levelLabel;
           if (snap.levelRank) this.guandanLevelRank = snap.levelRank;
@@ -1889,6 +1949,7 @@
             var ddir = this.getDirectionByPosId(snap.dizhuPosId);
             if (ddir && this.posState[ddir]) this.posState[ddir].isDizhu = true;
             this.posState.kitty.cards = (snap.topCards || []).slice(0);
+            this.recordDoudizhuVisibleCards(snap.topCards);
           }
           // 5) 上家牌信息（保证后续 CTX_PLAY_CHANGE 跟牌逻辑正确）
           if (snap.lastCardInfo) {
@@ -1959,7 +2020,7 @@
         },
         // 查看上一轮：出牌区是否可见
         ctxDisplayVisible: function (direct) {
-          if (this.roomState.state !== 2) return false;
+          if (this.roomState.state !== 2 && this.roomState.state !== 3) return false;
           var cards = this.ctxDisplayCards(direct);
           return (cards && cards.length) || this.ctxDisplayPass(direct);
         },
@@ -2106,6 +2167,28 @@
           return this.scoreSeen.map(function (name) {
             return { name: name, total: this.scoreBoard[name] || 0 };
           }.bind(this));
+        },
+        doudizhuKnownCount: function () {
+          return Object.keys(this.doudizhuSeenCards).length;
+        },
+        doudizhuCounterRows: function () {
+          var labels = { 11: 'J', 12: 'Q', 13: 'K', 14: 'A', 15: '2' };
+          return [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map(function (value) {
+            var seenCount = [0, 1, 2, 3].reduce(function (count, type) {
+              return count + (this.doudizhuSeenCards[value + '_' + type] ? 1 : 0);
+            }.bind(this), 0);
+            return {
+              key: String(value),
+              label: labels[value] || String(value),
+              remaining: 4 - seenCount
+            };
+          }.bind(this));
+        },
+        doudizhuCounterJokers: function () {
+          return [
+            { key: '16_0', label: '小王', remaining: this.doudizhuSeenCards['16_0'] ? 0 : 1 },
+            { key: '17_0', label: '大王', remaining: this.doudizhuSeenCards['17_0'] ? 0 : 1 }
+          ];
         }
       }
     })

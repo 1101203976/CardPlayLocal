@@ -11,7 +11,7 @@
  *   ABCDE(顺) / AABBCC(连对) / AAABBB(纯飞机)
  *   AAAABC(4+2单) / AAAABBCC(4+2对) / AAAA(炸) / KING(王炸)
  * 设计要点：
- *   - 自由出牌：优先打出长牌型（顺子 > 连对 > 飞机 > 三带 > 对 > 单），尽量多消牌、保留高控牌。
+ *   - 自由出牌：优先打出最小独立单张；没有独立单张时再选择顺子、连对、飞机等组合。
  *   - 跟牌：完整覆盖以上各类，并支持炸/王炸压制。
  * ===================================================================== */
 (function (global) {
@@ -277,7 +277,19 @@
     if (!hand.length) return [];
     var g = groupByValue(hand);
 
-    // 1) 顺子（5..12 长，越长越优先；同长起手越小越优先）
+    // 1) 优先出最小独立单张，避免提示主动拆对子、三张或炸弹。
+    var singles = [];
+    Object.keys(g).forEach(function (k) {
+      var vv = +k;
+      if (g[vv].length === 1) singles.push(vv);
+    });
+    singles.sort(function (a, b) { return a - b; });
+    for (var x = 0; x < singles.length; x++) {
+      if (singles[x] < 15) return [g[singles[x]][0]];
+    }
+    if (singles.length) return [g[singles[0]][0]];
+
+    // 2) 没有独立单张时再尝试顺子（5..12 长，越长越优先；同长起手越小越优先）
     for (var L = 12; L >= 5; L--) {
       for (var s = 3; s + L - 1 <= 14; s++) {
         var ok = true;
@@ -290,7 +302,7 @@
       }
     }
 
-    // 2) 连对（≥3 对；越长越优先）
+    // 3) 连对（≥3 对；越长越优先）
     for (var P = 8; P >= 3; P--) {
       for (var s2 = 3; s2 + P - 1 <= 14; s2++) {
         var ok2 = true;
@@ -303,7 +315,7 @@
       }
     }
 
-    // 3) 飞机（≥2 三连续，可带单/带对）
+    // 4) 飞机（≥2 三连续，可带单/带对）
     var bestPlane = null;
     var v = 3;
     while (v <= 14) {
@@ -334,7 +346,7 @@
       return pickCore;
     }
 
-    // 4) 三带（小三优先；先三带二，再三带一，最后裸三）
+    // 5) 三带（小三优先；先三带二，再三带一，最后裸三）
     var triples = [];
     Object.keys(g).forEach(function (k) {
       var vv = +k;
@@ -354,7 +366,7 @@
       return g[tv].slice(0, 3);
     }
 
-    // 5) 对子（最小，非炸）
+    // 6) 对子（最小，非炸）
     var pairs = [];
     Object.keys(g).forEach(function (k) {
       var vv = +k;
@@ -363,19 +375,14 @@
     pairs.sort(function (a, b) { return a - b; });
     if (pairs.length) return g[pairs[0]].slice(0, 2);
 
-    // 6) 单张（优先非2非王的最小单）
-    var singles = [];
-    Object.keys(g).forEach(function (k) {
-      var vv = +k;
-      if (g[vv].length === 1) singles.push(vv);
-    });
-    singles.sort(function (a, b) { return a - b; });
-    for (var x = 0; x < singles.length; x++) {
-      if (singles[x] < 15) return [g[singles[x]][0]];
+    // 7) 没有独立单张时，从最小的非炸牌组拆一张。
+    var splittable = Object.keys(g).map(Number).sort(function (a, b) { return a - b; });
+    for (var y = 0; y < splittable.length; y++) {
+      var sv = splittable[y];
+      if (g[sv].length < 4 && !isJoker(sv)) return [g[sv][0]];
     }
-    if (singles.length) return [g[singles[0]][0]];
 
-    // 7) 仅余炸 / 王炸：拆最小一张
+    // 8) 仅余炸 / 王炸：拆最小一张
     var allKeys = Object.keys(g).map(Number).sort(function (a, b) { return a - b; });
     if (allKeys.length) return [g[allKeys[0]][0]];
     return [];
