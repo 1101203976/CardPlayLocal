@@ -6,3 +6,7 @@ sso-secret.txt
 # 运行日志不入库
 *.out.log
 *.err.log
+
+# Local AI-tool configuration and generated UI audit artifacts
+.claude/
+.codex-ui-audit/
