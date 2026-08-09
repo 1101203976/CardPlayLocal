@@ -237,7 +237,7 @@
             class="card" :class="'card-' + card.value + '-' + card.type" :data-card-key="card.value + '_' + card.type + '_' + (card.deck || 0)" :style="{left:index * handGap(posState.self.cards, 'self') + 'px',top:card.selected ? '-20px' : 0}">
           </div>
           <section v-if="gameType === 'doudizhu' && roomState.state > 0 && roomState.state < 3 && cardCounterOpen" class="card-counter-panel" aria-label="斗地主牌面余量">
-            <button class="card-counter-close" type="button" @click="cardCounterOpen = false" aria-label="关闭牌面余量">×</button>
+            <button class="card-counter-close" type="button" @click="cardCounterOpen = false; cardCounterMuteCount = 0; cardCounterMuteTime = 0; cardCounterAccess = false" aria-label="关闭牌面余量">×</button>
             <div class="card-counter-row card-counter-ranks">
               <strong>牌号</strong>
               <span v-for="row in doudizhuCounterRows" :key="row.key">{{row.label}}</span>
@@ -553,8 +553,9 @@
           client: '',
           viewportWidth: window.innerWidth || 1280,
           cardCounterOpen: false,
-          cardCounterAccess: false,   // 连续开关6次音量解锁记牌器
+          cardCounterAccess: false,   // 5秒内连续开关6次音量解锁记牌器
           cardCounterMuteCount: 0,
+          cardCounterMuteTime: 0,
           doudizhuSeenCards: {},
 
           cards: [],
@@ -1766,6 +1767,7 @@
           this.cardCounterOpen = false;
           this.cardCounterAccess = false;
           this.cardCounterMuteCount = 0;
+          this.cardCounterMuteTime = 0;
           this.doudizhuSeenCards = {};
         },
         recordDoudizhuVisibleCards: function (cards) {
@@ -2006,16 +2008,19 @@
             var self = this;
             setTimeout(function () { window.FX && FX.setMuted(self.muted); }, 50);
           }
-          // 记牌器隐藏功能：连续开关音量 6 次解锁；解锁后每次开关音量重新打开
+          // 记牌器隐藏功能：5秒内连续开关音量 6 次解锁
           if (!this.cardCounterAccess) {
+            var now = Date.now();
+            if (!this.cardCounterMuteTime || now - this.cardCounterMuteTime > 5000) {
+              this.cardCounterMuteCount = 0;
+            }
+            this.cardCounterMuteTime = now;
             this.cardCounterMuteCount++;
             if (this.cardCounterMuteCount >= 6) {
               this.cardCounterAccess = true;
               this.cardCounterOpen = true;
               window.FX && FX.beep('call');
             }
-          } else if (!this.cardCounterOpen) {
-            this.cardCounterOpen = true;
           }
         },
         // 查看上一轮：需要展示的牌
